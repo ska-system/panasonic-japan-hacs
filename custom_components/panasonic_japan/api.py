@@ -1,7 +1,10 @@
 """API client for Panasonic Japan Kitchen Appliances."""
 from __future__ import annotations
 
+import base64
+import json
 import logging
+import time
 from datetime import datetime
 from typing import Any
 
@@ -228,6 +231,22 @@ class PanasonicAPI:
         except Exception as err:
             _LOGGER.exception("Error refreshing access token: %s", err)
             raise PanasonicAPIError(f"Failed to refresh token: {err}") from err
+
+    def is_token_expiring(self, margin_seconds: int = 300) -> bool:
+        """Return True if the access token expires within margin_seconds."""
+        if not self._access_token:
+            return True
+        try:
+            # JWT payload is the second base64url-encoded segment
+            payload_b64 = self._access_token.split(".")[1]
+            # Add padding if needed
+            payload_b64 += "=" * (-len(payload_b64) % 4)
+            payload = json.loads(base64.urlsafe_b64decode(payload_b64))
+            exp = payload.get("exp", 0)
+            return time.time() + margin_seconds >= exp
+        except Exception:
+            # If we can't decode, assume it's expiring to be safe
+            return True
 
     @property
     def access_token(self) -> str | None:
