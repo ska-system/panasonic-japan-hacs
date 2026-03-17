@@ -68,10 +68,8 @@ class PanasonicAPI:
         return headers
 
     def _url_encode_appliance_id(self, appliance_id: str) -> str:
-        """URL encode appliance_id (handles + and = characters)."""
-        from urllib.parse import quote
-
-        return quote(appliance_id, safe="")
+        """Convert appliance_id to base64url path segment (matches Android z() method)."""
+        return appliance_id.replace("+", "-").replace("/", "_")
 
     def _make_request(
         self, method: str, url: str, **kwargs: Any
@@ -105,6 +103,28 @@ class PanasonicAPI:
 
         response = self._make_request(
             "GET", url, headers=self._get_headers(), params=params, timeout=30
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def get_device_settings(self, appliance_id: str) -> dict[str, Any]:
+        """Get device control settings (usages=2 = VIEWED_SETTING_SCREEN)."""
+        appliance_id_encoded = self._url_encode_appliance_id(appliance_id)
+        url = f"{API_BASE_URL}/devices/{appliance_id_encoded}/status"
+
+        response = self._make_request(
+            "GET", url, headers=self._get_headers(), params={"usages": 2}, timeout=30
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def control_device(self, appliance_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """PUT /devices/{id}/status — send a control command to the fridge."""
+        appliance_id_encoded = self._url_encode_appliance_id(appliance_id)
+        url = f"{API_BASE_URL}/devices/{appliance_id_encoded}/status"
+
+        response = self._make_request(
+            "PUT", url, headers=self._get_headers(), json=payload, timeout=30
         )
         response.raise_for_status()
         return response.json()

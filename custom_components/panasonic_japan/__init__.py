@@ -13,7 +13,7 @@ from .push import PanasonicPushHandler
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH, Platform.SELECT]
 
 _PUSH_KEY = f"{DOMAIN}_push"
 

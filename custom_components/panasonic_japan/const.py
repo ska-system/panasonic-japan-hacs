@@ -12,6 +12,10 @@ AUTH0_AUDIENCE = "https://club.panasonic.jp/w7UI3iLByFFz3GOj6Ef6BCHfPczOcsy8/api
 AUTH0_TOKEN_URL = f"https://{AUTH0_DOMAIN}/oauth/token"
 API_KEY = "x6pdB3r5z2eqDCgwf0gF1Ffre7Au7Km3YoFY0fDh"
 
+# Status usages values (eUsagesItem enum from Android app)
+USAGES_TOP_SCREEN     = 1   # returns: operation_mode, cooloven_in_seconds, house_sitting, etc.
+USAGES_SETTING_SCREEN = 2   # returns: all control fields (ice, lights, modes)
+
 # Default values
 DEFAULT_SCAN_INTERVAL = 300  # 5 minutes
 BASELINE_COST = 750  # yen/month
