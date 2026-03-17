@@ -36,8 +36,16 @@ FIREBASE_PROJECT_ID = "kitchen-pocket-mwo"
 
 # Push notification types
 PUSH_TYPE = "1"  # FCM push type used by Panasonic app
-PUSH_KIND_DOOR = "alert_door_open_info"
+
+# Push notification kinds (kind field in FCM payload)
+PUSH_KIND_DOOR           = "alert_door_open_info"    # Door left open for 5 minutes
+PUSH_KIND_WATER_SHORTAGE = "alert_water_shortage"
+PUSH_KIND_ICE_COMPLETED  = "alert_ice_completed"
+PUSH_KIND_ERROR          = "alert_error_occured"     # Note: Panasonic typo
 
 # HA event names
-EVENT_DOOR = f"{DOMAIN}_door_event"
-EVENT_PUSH = f"{DOMAIN}_push_event"
+EVENT_DOOR           = f"{DOMAIN}_door_event"
+EVENT_WATER_SHORTAGE = f"{DOMAIN}_water_shortage_event"
+EVENT_ICE_COMPLETED  = f"{DOMAIN}_ice_completed_event"
+EVENT_ERROR          = f"{DOMAIN}_error_event"
+EVENT_PUSH           = f"{DOMAIN}_push_event"
