@@ -39,6 +39,14 @@ class PanasonicAPI:
         self._refresh_token = refresh_token
         self._session = requests.Session()
 
+    def reset_session(self) -> None:
+        """Close and recreate the HTTP session (clears stale connections)."""
+        try:
+            self._session.close()
+        except Exception:
+            pass
+        self._session = requests.Session()
+
     def _get_reizo_date(self) -> str:
         """Get current date in Japan timezone for X-Reizo-Date header."""
         # Use Asia/Tokyo timezone

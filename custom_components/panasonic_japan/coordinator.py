@@ -5,6 +5,8 @@ import asyncio
 import logging
 from datetime import timedelta
 
+import requests as requests_lib
+
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -116,6 +118,13 @@ class PanasonicDataUpdateCoordinator(DataUpdateCoordinator):
                         ) from retry_err
 
             raise UpdateFailed(f"Error communicating with API: {err}") from err
+
+        except (requests_lib.exceptions.Timeout,
+                requests_lib.exceptions.ConnectionError) as err:
+            # Reset the session so the next update gets a fresh connection
+            _LOGGER.warning("Network error, resetting session: %s", err)
+            await self.hass.async_add_executor_job(self.api.reset_session)
+            raise UpdateFailed(f"Network error (will retry): {err}") from err
 
         except Exception as err:
             raise UpdateFailed(f"Unexpected error: {err}") from err
