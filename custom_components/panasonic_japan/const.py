@@ -27,3 +27,17 @@ ATTR_ELECTRICITY_USAGE = "electricity_usage"
 
 # Device types
 DEVICE_TYPE_FRIDGE = "fridge"
+
+# Firebase / FCM configuration (from Panasonic Kitchen Pocket app)
+FIREBASE_SENDER_ID = "209752140776"
+FIREBASE_APP_ID = "1:209752140776:android:8d43b943c43bb928"
+FIREBASE_API_KEY = "AIzaSyDARxcioH3WkPV7mLH5esQqMoknjbc1534"
+FIREBASE_PROJECT_ID = "kitchen-pocket-mwo"
+
+# Push notification types
+PUSH_TYPE = "1"  # FCM push type used by Panasonic app
+PUSH_KIND_DOOR = "alert_door_open_info"
+
+# HA event names
+EVENT_DOOR = f"{DOMAIN}_door_event"
+EVENT_PUSH = f"{DOMAIN}_push_event"

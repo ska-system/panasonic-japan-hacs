@@ -9,10 +9,13 @@ from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
 from .coordinator import PanasonicDataUpdateCoordinator
+from .push import PanasonicPushHandler
 
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH]
+
+_PUSH_KEY = f"{DOMAIN}_push"
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -24,6 +27,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    # Start push notification listener (non-blocking; failure is logged, not fatal)
+    push_handler = PanasonicPushHandler(hass, coordinator.api, entry)
+    hass.data.setdefault(_PUSH_KEY, {})[entry.entry_id] = push_handler
+    hass.async_create_task(push_handler.async_start())
+
     return True
 
 
@@ -32,5 +40,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
+        push_handler: PanasonicPushHandler = hass.data.get(_PUSH_KEY, {}).pop(
+            entry.entry_id, None
+        )
+        if push_handler:
+            await push_handler.async_stop()
 
     return unload_ok
