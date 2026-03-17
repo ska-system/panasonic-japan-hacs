@@ -94,6 +94,9 @@ class PanasonicDataUpdateCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self) -> dict:
         """Fetch data from Panasonic API."""
 
+        # Fresh connection for every update cycle — prevents stale socket issues
+        await self.hass.async_add_executor_job(self.api.reset_session)
+
         # Proactively refresh the token if it expires within the next 5 minutes
         if self.api.is_token_expiring(margin_seconds=300):
             _LOGGER.debug("Access token is expiring soon — refreshing proactively")
