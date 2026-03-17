@@ -22,3 +22,5 @@ wheels/
 venv/
 ENV/
 env/
+push_credentials.json
+.claude

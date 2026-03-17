@@ -10,15 +10,28 @@ from homeassistant.core import HomeAssistant
 from .const import (
     DOMAIN,
     EVENT_DOOR,
+    EVENT_ERROR,
+    EVENT_ICE_COMPLETED,
     EVENT_PUSH,
+    EVENT_WATER_SHORTAGE,
     FIREBASE_API_KEY,
     FIREBASE_APP_ID,
     FIREBASE_PROJECT_ID,
     FIREBASE_SENDER_ID,
     PUSH_KIND_DOOR,
+    PUSH_KIND_ERROR,
+    PUSH_KIND_ICE_COMPLETED,
+    PUSH_KIND_WATER_SHORTAGE,
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+_KIND_TO_EVENT = {
+    PUSH_KIND_DOOR:           EVENT_DOOR,
+    PUSH_KIND_WATER_SHORTAGE: EVENT_WATER_SHORTAGE,
+    PUSH_KIND_ICE_COMPLETED:  EVENT_ICE_COMPLETED,
+    PUSH_KIND_ERROR:          EVENT_ERROR,
+}
 
 
 class PanasonicPushHandler:
@@ -37,39 +50,48 @@ class PanasonicPushHandler:
             from firebase_messaging import FcmPushClient, FcmRegisterConfig
         except ImportError:
             _LOGGER.error(
-                "firebase_messaging package not installed; push notifications disabled. "
-                "Add 'firebase-messaging' to your requirements."
+                "firebase_messaging not installed; push notifications disabled"
             )
             return
 
         entry_data = dict(self.config_entry.data)
         term_id: str = entry_data.get("push_term_id") or str(uuid.uuid4())
-        stored_credentials = entry_data.get("fcm_credentials")
+        saved_credentials: dict | None = entry_data.get("fcm_credentials")
 
-        config = FcmRegisterConfig(
-            sender_id=FIREBASE_SENDER_ID,
+        fcm_config = FcmRegisterConfig(
+            project_id=FIREBASE_PROJECT_ID,
             app_id=FIREBASE_APP_ID,
             api_key=FIREBASE_API_KEY,
-            project_id=FIREBASE_PROJECT_ID,
+            messaging_sender_id=FIREBASE_SENDER_ID,
+            bundle_id="com.panasonic.jp.kitchenpocket",
         )
 
-        self._client = FcmPushClient(
-            credentials=stored_credentials,
-            config=config,
-            callback=self._on_message,
-        )
-
-        new_credentials = await self._client.checkin_or_register()
-
-        # Re-register with Panasonic whenever our FCM credentials change
-        if new_credentials != stored_credentials:
-            fcm_token: str = new_credentials.get("token", "")
-            firebase_install_id: str = new_credentials.get(
-                "firebase_installation_id", str(uuid.uuid4())
+        def _on_credentials_updated(new_creds: dict) -> None:
+            updated = dict(self.config_entry.data)
+            updated["fcm_credentials"] = new_creds
+            self.hass.config_entries.async_update_entry(
+                self.config_entry, data=updated
             )
 
-            _LOGGER.debug(
-                "New FCM token acquired, registering push term with Panasonic"
+        self._client = FcmPushClient(
+            callback=self._on_message,
+            fcm_config=fcm_config,
+            credentials=saved_credentials,
+            credentials_updated_callback=_on_credentials_updated,
+        )
+
+        fcm_token: str = await self._client.checkin_or_register()
+
+        old_token = (saved_credentials or {}).get("fcm", {}).get(
+            "registration", {}
+        ).get("token")
+
+        if fcm_token != old_token:
+            firebase_install_id: str = (
+                self._client.credentials.get("fcm", {})
+                .get("installation", {})
+                .get("fid")
+                or str(uuid.uuid4())
             )
             term_data = await self.hass.async_add_executor_job(
                 self.api.register_push_term,
@@ -80,24 +102,31 @@ class PanasonicPushHandler:
             if term_data:
                 term_id = term_data.get("termId", term_id)
 
-            entry_data["fcm_credentials"] = new_credentials
+            entry_data["fcm_credentials"] = self._client.credentials
             entry_data["push_term_id"] = term_id
             self.hass.config_entries.async_update_entry(
                 self.config_entry, data=entry_data
             )
-            _LOGGER.debug("Push term registered: %s", term_id)
+            _LOGGER.info("Push term registered: %s", term_id)
+
+        # Link the push term to the specific fridge device
+        appliance_id: str = self.config_entry.data.get("appliance_id", "")
+        if appliance_id:
+            await self.hass.async_add_executor_job(
+                self.api.link_push_to_device, appliance_id, term_id
+            )
+            _LOGGER.debug("Push term linked to device %s", appliance_id)
 
         await self._client.start()
-        _LOGGER.info("Panasonic push notification listener started (term_id=%s)", term_id)
+        _LOGGER.info("Push notification listener started (term_id=%s)", term_id)
 
     async def async_stop(self) -> None:
         """Stop the push notification listener."""
         if self._client:
             await self._client.stop()
             self._client = None
-            _LOGGER.debug("Push notification listener stopped")
 
-    def _on_message(self, sender_id: str, data: dict[str, Any]) -> None:
+    def _on_message(self, data: dict[str, Any], sender_id: str, context: Any = None) -> None:
         """Handle an incoming FCM push message from Panasonic."""
         kind: str = data.get("kind", "")
         appliance_id: str = data.get("appliance_id", "")
@@ -111,13 +140,10 @@ class PanasonicPushHandler:
             "body": data.get("body", ""),
         }
 
-        if kind == PUSH_KIND_DOOR:
-            self.hass.bus.fire(EVENT_DOOR, event_data)
-            _LOGGER.info(
-                "Door event fired for appliance %s: %s",
-                appliance_id,
-                data.get("body", ""),
-            )
+        event_type = _KIND_TO_EVENT.get(kind, EVENT_PUSH)
+        self.hass.bus.fire(event_type, event_data)
+
+        if event_type != EVENT_PUSH:
+            _LOGGER.info("Event fired: %s — %s", event_type, data.get("body", ""))
         else:
-            # Fire a generic event for other notification types (errors, firmware, etc.)
-            self.hass.bus.fire(EVENT_PUSH, event_data)
+            _LOGGER.debug("Generic push event fired: kind=%s", kind)

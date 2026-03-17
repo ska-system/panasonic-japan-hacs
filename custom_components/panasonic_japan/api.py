@@ -165,6 +165,24 @@ class PanasonicAPI:
             _LOGGER.exception("Error registering push term: %s", err)
             return None
 
+    def link_push_to_device(self, appliance_id: str, term_id: str) -> dict[str, Any] | None:
+        """GET /devices/{id}/settings?term_id=... — links the push term to the fridge."""
+        appliance_id_encoded = self._url_encode_appliance_id(appliance_id)
+        url = f"{API_BASE_URL}/devices/{appliance_id_encoded}/settings"
+        try:
+            response = self._make_request(
+                "GET",
+                url,
+                headers=self._get_headers(),
+                params={"term_id": term_id},
+                timeout=30,
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as err:
+            _LOGGER.exception("Error linking push term to device: %s", err)
+            return None
+
     def refresh_access_token(self) -> dict[str, Any] | None:
         """Refresh the access token using refresh token."""
         if not self._refresh_token:
