@@ -1,6 +1,7 @@
 """Data update coordinator for Panasonic Japan."""
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import timedelta
 
@@ -37,13 +38,21 @@ class PanasonicDataUpdateCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self) -> dict:
         """Fetch data from Panasonic API."""
         try:
-            # Fetch device status and electricity data
-            device_status = await self.hass.async_add_executor_job(
-                self.api.get_device_status, self.appliance_id
+            # Fetch operational status (usages=1), control settings (usages=2), electricity
+            device_status, device_settings, electricity_data = await asyncio.gather(
+                self.hass.async_add_executor_job(
+                    self.api.get_device_status, self.appliance_id
+                ),
+                self.hass.async_add_executor_job(
+                    self.api.get_device_settings, self.appliance_id
+                ),
+                self.hass.async_add_executor_job(
+                    self.api.get_electricity_reduction, self.appliance_id
+                ),
             )
-            electricity_data = await self.hass.async_add_executor_job(
-                self.api.get_electricity_reduction, self.appliance_id
-            )
+
+            # Merge settings into status so all fields are in one dict
+            device_status.update(device_settings)
 
             return {
                 "device_status": device_status,
@@ -70,12 +79,18 @@ class PanasonicDataUpdateCoordinator(DataUpdateCoordinator):
                         )
 
                         # Retry the request
-                        device_status = await self.hass.async_add_executor_job(
-                            self.api.get_device_status, self.appliance_id
+                        device_status, device_settings, electricity_data = await asyncio.gather(
+                            self.hass.async_add_executor_job(
+                                self.api.get_device_status, self.appliance_id
+                            ),
+                            self.hass.async_add_executor_job(
+                                self.api.get_device_settings, self.appliance_id
+                            ),
+                            self.hass.async_add_executor_job(
+                                self.api.get_electricity_reduction, self.appliance_id
+                            ),
                         )
-                        electricity_data = await self.hass.async_add_executor_job(
-                            self.api.get_electricity_reduction, self.appliance_id
-                        )
+                        device_status.update(device_settings)
 
                         return {
                             "device_status": device_status,
