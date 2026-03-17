@@ -299,6 +299,143 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors=errors,
             )
 
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle reconfiguration - redo the login flow and update tokens."""
+        # Generate new PKCE parameters
+        code_verifier, code_challenge, state, nonce = self._generate_pkce()
+
+        self.context["code_verifier"] = code_verifier
+        self.context["state"] = state
+        self.context["nonce"] = nonce
+        self.context["reconfigure"] = True
+
+        login_url = self._generate_login_url(code_challenge, state, nonce)
+        self.context["login_url"] = login_url
+
+        return await self.async_step_reconfigure_callback()
+
+    async def async_step_reconfigure_callback(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle callback URL entry during reconfiguration."""
+        errors = {}
+
+        login_url = self.context.get("login_url", "")
+        code_verifier = self.context.get("code_verifier", "")
+
+        if user_input is None:
+            return self.async_show_form(
+                step_id="reconfigure_callback",
+                data_schema=get_callback_schema(login_url),
+                description_placeholders={"login_url": login_url},
+                errors=errors,
+            )
+
+        callback_url = user_input.get("callback_url", "").strip()
+
+        if not callback_url:
+            errors["base"] = "callback_url_required"
+            return self.async_show_form(
+                step_id="reconfigure_callback",
+                data_schema=get_callback_schema(login_url),
+                description_placeholders={"login_url": login_url},
+                errors=errors,
+            )
+
+        code = self._extract_code_from_callback(callback_url)
+        if not code:
+            errors["base"] = "invalid_callback_url"
+            return self.async_show_form(
+                step_id="reconfigure_callback",
+                data_schema=get_callback_schema(login_url),
+                description_placeholders={"login_url": login_url},
+                errors=errors,
+            )
+
+        try:
+            token_response = await self.hass.async_add_executor_job(
+                self._exchange_code_for_tokens, code, code_verifier
+            )
+
+            if not token_response:
+                errors["base"] = "token_exchange_failed"
+                return self.async_show_form(
+                    step_id="reconfigure_callback",
+                    data_schema=get_callback_schema(login_url),
+                    description_placeholders={"login_url": login_url},
+                    errors=errors,
+                )
+
+            access_token = token_response.get("access_token")
+            refresh_token = token_response.get("refresh_token")
+
+            if not access_token:
+                errors["base"] = "no_access_token"
+                return self.async_show_form(
+                    step_id="reconfigure_callback",
+                    data_schema=get_callback_schema(login_url),
+                    description_placeholders={"login_url": login_url},
+                    errors=errors,
+                )
+
+            # Validate token
+            api = PanasonicAPI(access_token=access_token)
+            user_info = await self.hass.async_add_executor_job(api.get_user_info)
+
+            if not user_info or not user_info.get("myAppliances"):
+                errors["base"] = "invalid_token"
+                return self.async_show_form(
+                    step_id="reconfigure_callback",
+                    data_schema=get_callback_schema(login_url),
+                    description_placeholders={"login_url": login_url},
+                    errors=errors,
+                )
+
+            appliances = user_info.get("myAppliances", [])
+            fridge_appliance = None
+            for appliance in appliances:
+                if appliance.get("eoj") == "03B7":
+                    fridge_appliance = appliance
+                    break
+
+            if not fridge_appliance:
+                errors["base"] = "no_fridge_found"
+                return self.async_show_form(
+                    step_id="reconfigure_callback",
+                    data_schema=get_callback_schema(login_url),
+                    description_placeholders={"login_url": login_url},
+                    errors=errors,
+                )
+
+            appliance_id = fridge_appliance["info"]["applianceId"]
+            product_code = fridge_appliance["info"]["productCode"]
+
+            new_data = {
+                CONF_ACCESS_TOKEN: access_token,
+                "appliance_id": appliance_id,
+                "product_code": product_code,
+            }
+            if refresh_token:
+                new_data["refresh_token"] = refresh_token
+
+            return self.async_update_reload_and_abort(
+                self._get_reconfigure_entry(),
+                title=f"Panasonic Fridge ({product_code})",
+                data=new_data,
+            )
+
+        except Exception as err:
+            _LOGGER.exception("Unexpected exception during reconfigure: %s", err)
+            errors["base"] = "unknown"
+            return self.async_show_form(
+                step_id="reconfigure_callback",
+                data_schema=get_callback_schema(login_url),
+                description_placeholders={"login_url": login_url},
+                errors=errors,
+            )
+
     async def async_step_import(self, import_info: dict[str, Any]) -> FlowResult:
         """Handle import from configuration.yaml."""
         # For import, we still need to go through the flow
