@@ -136,6 +136,35 @@ class PanasonicAPI:
         response.raise_for_status()
         return response.json()
 
+    def register_push_term(
+        self, term_id: str, fcm_token: str, firebase_install_id: str
+    ) -> dict[str, Any] | None:
+        """Register FCM push token with Panasonic API."""
+        from .const import PUSH_TYPE
+
+        url = f"{KAPF_API_BASE_URL}/push/new-term"
+        headers = self._get_headers(include_reizo_date=False)
+        headers["X-API-Key"] = API_KEY
+        headers["User-Agent"] = "KitchenPocketA/5.1.0"
+
+        data = {
+            "smpLocale": "ja",
+            "termId": term_id,
+            "token": fcm_token,
+            "type": PUSH_TYPE,
+            "firebaseInstallId": firebase_install_id,
+        }
+
+        try:
+            response = self._make_request(
+                "POST", url, json=data, headers=headers, timeout=30
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as err:
+            _LOGGER.exception("Error registering push term: %s", err)
+            return None
+
     def refresh_access_token(self) -> dict[str, Any] | None:
         """Refresh the access token using refresh token."""
         if not self._refresh_token:
