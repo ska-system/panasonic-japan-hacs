@@ -100,7 +100,7 @@ class PanasonicAPI:
         url = f"{KAPF_API_BASE_URL}/user/info"
         headers = self._get_headers(include_reizo_date=False)
         headers["X-API-Key"] = API_KEY
-        headers["User-Agent"] = "KitchenPocketA/5.1.0"
+        headers["User-Agent"] = "KitchenPocketA/5.4.1"
 
         response = self._make_request("GET", url, headers=headers, timeout=30)
         response.raise_for_status()
@@ -174,9 +174,9 @@ class PanasonicAPI:
         from .const import PUSH_TYPE
 
         url = f"{KAPF_API_BASE_URL}/push/new-term"
-        headers = self._get_headers(include_reizo_date=False)
+        headers = self._get_headers(include_reizo_date=False)1
         headers["X-API-Key"] = API_KEY
-        headers["User-Agent"] = "KitchenPocketA/5.1.0"
+        headers["User-Agent"] = "KitchenPocketA/5.4.1"
 
         data = {
             "smpLocale": "ja",
