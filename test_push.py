@@ -95,7 +95,7 @@ def get_appliance_id(access_token: str) -> str | None:
         "Accept": "application/json",
         "Authorization": f"Bearer {access_token}",
         "X-API-Key": API_KEY,
-        "User-Agent": "KitchenPocketA/5.1.0",
+        "User-Agent": "KitchenPocketA/5.4.1",
     }
     resp = requests.get(url, headers=headers, timeout=30)
     resp.raise_for_status()
@@ -120,7 +120,7 @@ def register_push_term(access_token: str, term_id: str, fcm_token: str, firebase
         "Accept": "application/json",
         "Authorization": f"Bearer {access_token}",
         "X-API-Key": API_KEY,
-        "User-Agent": "KitchenPocketA/5.1.0",
+        "User-Agent": "KitchenPocketA/5.4.1",
     }
     payload = {
         "smpLocale": "ja",

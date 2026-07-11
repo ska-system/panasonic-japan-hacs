@@ -56,7 +56,7 @@ def get_appliance_id(token: str) -> tuple[str, str]:
             "Accept": "application/json",
             "Authorization": f"Bearer {token}",
             "X-API-Key": API_KEY,
-            "User-Agent": "KitchenPocketA/5.1.0",
+            "User-Agent": "KitchenPocketA/5.4.1",
         },
         timeout=30,
     )
