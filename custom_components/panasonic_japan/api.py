@@ -174,7 +174,7 @@ class PanasonicAPI:
         from .const import PUSH_TYPE
 
         url = f"{KAPF_API_BASE_URL}/push/new-term"
-        headers = self._get_headers(include_reizo_date=False)1
+        headers = self._get_headers(include_reizo_date=False)
         headers["X-API-Key"] = API_KEY
         headers["User-Agent"] = "KitchenPocketA/5.4.1"
 
