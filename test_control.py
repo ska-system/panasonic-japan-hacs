@@ -61,6 +61,9 @@ def get_appliance_id(token: str) -> tuple[str, str]:
         timeout=30,
     )
     resp.raise_for_status()
+    print("--- ALL API DATA DUMP ---")
+    print(json.dumps(resp.json(), indent=2, ensure_ascii=False))
+    print("-------------------------")    
     for a in resp.json().get("myAppliances", []):
         print(f"  Found appliance: eoj={a.get('eoj')}  model={a['info'].get('productCode')}")
         if a.get("eoj") == "03B7":
@@ -72,6 +75,22 @@ def get_appliance_id(token: str) -> tuple[str, str]:
         return a["info"]["applianceId"], a["info"].get("productCode", "")
     raise RuntimeError("No appliance found")
 
+def get_eoj_info(token: str) -> dict:
+    """Return EOJ Info."""
+    resp = requests.get(
+        f"{KAPF_API_BASE_URL}/product/eoj-info",
+        headers={
+            "Accept": "application/json",
+            "X-API-Key": API_KEY,
+            "User-Agent": "KitchenPocketA/5.4.1",
+        },
+        timeout=30,
+    )
+    resp.raise_for_status()
+    print("--- ALL API DATA DUMP ---")
+    print(json.dumps(resp.json(), indent=2, ensure_ascii=False))
+    print("-------------------------")
+    return resp.json()
 
 def get_status(token: str, appliance_id: str) -> dict:
     # usages=2 = VIEWED_SETTING_SCREEN — returns all control fields
@@ -82,6 +101,9 @@ def get_status(token: str, appliance_id: str) -> dict:
         timeout=30,
     )
     resp.raise_for_status()
+    print("--- ALL API DATA DUMP ---")
+    print(json.dumps(resp.json(), indent=2, ensure_ascii=False))
+    print("-------------------------")
     return resp.json()
 
 
@@ -92,6 +114,9 @@ def get_functions(token: str, appliance_id: str) -> dict:
         timeout=30,
     )
     resp.raise_for_status()
+    print("--- ALL API DATA DUMP ---")
+    print(json.dumps(resp.json(), indent=2, ensure_ascii=False))
+    print("-------------------------")
     return resp.json()
 
 
@@ -126,6 +151,45 @@ def probe_endpoints(token: str, appliance_id: str) -> None:
             print(f"  usages={usages} → {r.status_code}  extra fields: {fields}")
         except Exception as e:
             print(f"  usages={usages} → ERROR: {e}")
+
+def get_firmwareVersion(token: str, appliance_id: str) -> dict:
+    url = f"{KAPF_API_BASE_URL}/rc/devices/properties/firmwareVersion"
+    url = f"{KAPF_API_BASE_URL}/device/iot-module/firmware-version"
+    headers = {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Accept": "application/json",
+        "Authorization": f"Bearer {token}",
+        "X-API-Key": API_KEY,
+        "User-Agent": "KitchenPocketA/5.4.1",
+    }
+    payload = {
+        "applianceId": _encode(appliance_id),
+    }
+
+    print("get_firmwareVersion …")
+    resp = requests.post(url, json=payload, headers=headers, timeout=30)
+    resp.raise_for_status()
+    print("--- ALL API DATA DUMP ---")
+    print(json.dumps(resp.json(), indent=2, ensure_ascii=False))
+    print("-------------------------")
+    return resp.json()
+
+def get_device_token(token: str, appliance_id: str) -> dict:
+    url = f"{KAPF_API_BASE_URL}/dv/device/token"
+    headers = {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Accept": "application/json",
+        "Authorization": f"Bearer {token}",
+        "X-API-Key": API_KEY,
+        "User-Agent": "KitchenPocketA/5.4.1",
+    }
+    print("get_device_token …")
+    resp = requests.post(url, headers=headers, timeout=30)
+    resp.raise_for_status()
+    print("--- ALL API DATA DUMP ---")
+    print(json.dumps(resp.json(), indent=2, ensure_ascii=False))
+    print("-------------------------")
+    return resp.json()
 
 
 # ── Interactive menu ───────────────────────────────────────────────────────────
@@ -219,6 +283,11 @@ def main() -> None:
         appliance_id, product_code = get_appliance_id(token)
     print(f"  Appliance ID : {appliance_id}")
     print(f"  Product code : {product_code}")
+
+    status = get_eoj_info(token)
+    get_device_token(token, appliance_id)
+
+    get_firmwareVersion(token, appliance_id)
 
     print("\nFetching current status …")
     status = get_status(token, appliance_id)
