@@ -70,11 +70,15 @@ def _reizo_date() -> str:
         tz = pytz.timezone("Asia/Tokyo")
     return datetime.now(tz).strftime("%Y-%m-%dT%H:%M:%S")
 
-
+def _encode(appliance_id: str) -> str:
+    """Convert appliance_id to base64url path segment (matches Android z() method)."""
+    return appliance_id.replace("+", "-").replace("/", "_")
+    
 def link_push_to_device(access_token: str, appliance_id: str, term_id: str) -> dict:
     """GET devices/{appliance_id}/settings?term_id=... — links the push term to this fridge."""
     from urllib.parse import quote
-    encoded_id = quote(appliance_id, safe="")
+    encoded_id = _encode(appliance_id)
+
     url = f"{REIZO_API_BASE_URL}/devices/{encoded_id}/settings"
     headers = {
         "Accept": "application/json",
