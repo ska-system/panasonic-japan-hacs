@@ -1,0 +1,38 @@
+{
+  "config": {
+    "step": {
+      "reconfigure_callback": {
+        "title": "Panasonic Japan の再認証",
+        "description": "Panasonic アカウントを再認証してアクセストークンを更新します。\n\n**手順 1:** 以下のログイン URL をクリックして、ブラウザでログインページを開いてください:\n\n**ログイン URL:**\n`{login_url}`\n\n**手順 2:** ログイン後、リダイレクト先のコールバック URL 全体をコピーし、以下に貼り付けてください。",
+        "data": {
+          "callback_url": "コールバック URL"
+        },
+        "data_description": {
+          "callback_url": "ログイン後に取得したコールバック URL 全体を貼り付けてください"
+        }
+      },
+      "callback": {
+        "title": "Panasonic Japan 認証",
+        "description": "**手順 1:** 以下のログイン URL をクリックして、ブラウザでログインページを開いてください:\n\n**ログイン URL:**\n`{login_url}`\n\n**手順 2:** Panasonic アカウントでログインすると、コールバック URL にリダイレクトされます。\n\n**手順 3:** コールバック URL 全体をコピーし（例: `com.panasonic.jp.kitchenpocket.auth0://...`）、以下のフィールドに貼り付けてください。",
+        "data": {
+          "callback_url": "コールバック URL"
+        },
+        "data_description": {
+          "callback_url": "ログイン後に取得したコールバック URL 全体を貼り付けてください"
+        }
+      }
+    },
+    "error": {
+      "callback_url_required": "コールバック URL を入力してください",
+      "invalid_callback_url": "コールバック URL の形式が正しくありません。確認してもう一度お試しください。",
+      "token_exchange_failed": "認証コードのトークン交換に失敗しました。コードの有効期限が切れている可能性があります。もう一度お試しください。",
+      "no_access_token": "認証サーバーからアクセストークンを取得できませんでした",
+      "invalid_token": "アクセストークンが無効か、期限切れです",
+      "no_fridge_found": "アカウント内に冷蔵庫デバイスが見つかりませんでした",
+      "unknown": "予期しないエラーが発生しました"
+    },
+    "abort": {
+      "already_configured": "このデバイスは既に設定済みです"
+    }
+  }
+}
