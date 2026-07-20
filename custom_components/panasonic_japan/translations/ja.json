@@ -74,7 +74,7 @@
         "name": "ドアアラーム音量",
         "state": {
           "medium": "中",
-          "strong": "大"
+          "big": "大"
         }
       },
       "coldroom_light_mode": {
