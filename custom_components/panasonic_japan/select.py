@@ -42,7 +42,6 @@ SELECTS: tuple[PanasonicSelectDescription, ...] = (
     PanasonicSelectDescription(
         key="freezing_room_mode",
         translation_key="freezing_room_mode",
-        # name="Freezer Temperature",
         icon="mdi:thermometer-minus",
         status_key="freezing_room_mode",
         options=["weak", "medium", "strong"],
@@ -50,7 +49,6 @@ SELECTS: tuple[PanasonicSelectDescription, ...] = (
     PanasonicSelectDescription(
         key="coldroom_light_mode",
         translation_key="coldroom_light_mode",
-        # name="Cold Room Light",
         icon="mdi:lightbulb",
         status_key="coldroom_light_mode",
         options=["off", "dark", "bright"],
@@ -58,7 +56,6 @@ SELECTS: tuple[PanasonicSelectDescription, ...] = (
     PanasonicSelectDescription(
         key="pcroom_light_mode",
         translation_key="pcroom_light_mode",
-        # name="PC Room Light",
         icon="mdi:lightbulb-outline",
         status_key="pcroom_light_mode",
         options=["off", "dark", "bright"],
@@ -66,7 +63,6 @@ SELECTS: tuple[PanasonicSelectDescription, ...] = (
     PanasonicSelectDescription(
         key="door_alarms_mode",
         translation_key="door_alarms_mode",
-        # name="Door Alarm",
         icon="mdi:alarm-light",
         status_key="door_alarms_mode",
         options=["off", "weak", "medium", "strong"],
@@ -74,7 +70,6 @@ SELECTS: tuple[PanasonicSelectDescription, ...] = (
     PanasonicSelectDescription(
         key="cooloven_lamp_mode",
         translation_key="cooloven_lamp_mode",
-        # name="Cooling Assist Lamp",
         icon="mdi:lightbulb",
         status_key="cooloven_lamp_mode",
         options=["off", "dark", "bright"],
