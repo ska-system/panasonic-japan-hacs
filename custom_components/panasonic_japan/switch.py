@@ -45,7 +45,7 @@ SWITCHES: tuple[PanasonicSwitchDescription, ...] = (
     ),
     PanasonicSwitchDescription(
         key="econavi_lamp",
-        name="EcoNavi Lamp",
+        name="Econavi Lamp",
         icon="mdi:lightbulb",
         status_key="econavi_lamp_status",
     ),
