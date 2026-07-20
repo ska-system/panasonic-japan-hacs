@@ -43,6 +43,12 @@ SWITCHES: tuple[PanasonicSwitchDescription, ...] = (
         icon="mdi:fridge-industrial",
         status_key="fresh_frozen_status",
     ),
+    PanasonicSwitchDescription(
+        key="econavi_lamp",
+        name="EcoNavi Lamp",
+        icon="mdi:lightbulb",
+        status_key="econavi_lamp_status",
+    ),
 )
 
 
