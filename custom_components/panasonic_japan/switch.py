@@ -27,28 +27,28 @@ class PanasonicSwitchDescription(SwitchEntityDescription):
 SWITCHES: tuple[PanasonicSwitchDescription, ...] = (
     PanasonicSwitchDescription(
         key="fast_ice",
-        translation_key = "fast_ice",
+        translation_key = "fast_ice_status",
         # name="Fast Ice",
         icon="mdi:snowflake-variant",
         status_key="fast_ice_status",
     ),
     PanasonicSwitchDescription(
         key="stop_ice",
-        translation_key = "stop_ice",
+        translation_key = "stop_ice_status",
         # name="Stop Ice",
         icon="mdi:snowflake-off",
         status_key="stop_ice_status",
     ),
     PanasonicSwitchDescription(
         key="fresh_frozen",
-        translation_key = "fresh_frozen",
+        translation_key = "fresh_frozen_status",
         # name="Fresh Frozen",
         icon="mdi:fridge-industrial",
         status_key="fresh_frozen_status",
     ),
     PanasonicSwitchDescription(
         key="econavi_lamp",
-        translation_key = "econavi_lamp",
+        translation_key = "econavi_lamp_status",
         # name="Econavi Lamp",
         icon="mdi:lightbulb",
         status_key="econavi_lamp_status",
@@ -79,7 +79,7 @@ class PanasonicSwitch(CoordinatorEntity[PanasonicDataUpdateCoordinator], SwitchE
 
     entity_description: PanasonicSwitchDescription
     _attr_has_entity_name = True
-    
+
     def __init__(
         self,
         coordinator: PanasonicDataUpdateCoordinator,
