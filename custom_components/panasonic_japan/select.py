@@ -26,50 +26,55 @@ class PanasonicSelectDescription(SelectEntityDescription):
 
 SELECTS: tuple[PanasonicSelectDescription, ...] = (
     PanasonicSelectDescription(
+        key="partial_mode",
+        translation_key="partial_mode",
+        icon="mdi:fridge-bottom",
+        status_key="partial_mode",
+        options=["chilled", "weak", "medium", "strong"],
+    ),
+    PanasonicSelectDescription(
         key="cold_room_mode",
-        name="Cold Room Temperature",
+        translation_key="cold_room_mode",
         icon="mdi:thermometer",
         status_key="cold_room_mode",
         options=["weak", "medium", "strong"],
     ),
     PanasonicSelectDescription(
         key="freezing_room_mode",
-        name="Freezer Temperature",
+        translation_key="freezing_room_mode",
+        # name="Freezer Temperature",
         icon="mdi:thermometer-minus",
         status_key="freezing_room_mode",
         options=["weak", "medium", "strong"],
     ),
     PanasonicSelectDescription(
-        key="partial_mode",
-        name="Partial Compartment Mode",
-        icon="mdi:fridge-bottom",
-        status_key="partial_mode",
-        options=["chilled", "weak", "medium", "strong"],
-    ),
-    PanasonicSelectDescription(
         key="coldroom_light_mode",
-        name="Cold Room Light",
+        translation_key="coldroom_light_mode",
+        # name="Cold Room Light",
         icon="mdi:lightbulb",
         status_key="coldroom_light_mode",
         options=["off", "dark", "bright"],
     ),
     PanasonicSelectDescription(
         key="pcroom_light_mode",
-        name="PC Room Light",
+        translation_key="pcroom_light_mode",
+        # name="PC Room Light",
         icon="mdi:lightbulb-outline",
         status_key="pcroom_light_mode",
         options=["off", "dark", "bright"],
     ),
     PanasonicSelectDescription(
         key="door_alarms_mode",
-        name="Door Alarm",
+        translation_key="door_alarms_mode",
+        # name="Door Alarm",
         icon="mdi:alarm-light",
         status_key="door_alarms_mode",
         options=["off", "weak", "medium", "strong"],
     ),
     PanasonicSelectDescription(
         key="cooloven_lamp_mode",
-        name="Cooling Assist Lamp",
+        translation_key="cooloven_lamp_mode",
+        # name="Cooling Assist Lamp",
         icon="mdi:lightbulb",
         status_key="cooloven_lamp_mode",
         options=["off", "dark", "bright"],
@@ -98,6 +103,7 @@ class PanasonicSelect(CoordinatorEntity[PanasonicDataUpdateCoordinator], SelectE
     """A mode selector for the Panasonic fridge."""
 
     entity_description: PanasonicSelectDescription
+    _attr_has_entity_name = True
 
     def __init__(
         self,

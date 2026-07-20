@@ -34,6 +34,42 @@
       "abort": {
         "already_configured": "This device is already configured"
       }
+    },
+    "entity": {
+      "select": {
+        "partial_mode": {
+          "name": "Partial Compartment Mode"
+        },
+        "cold_room_mode": {
+          "name": "Cold Room Temperature"
+        },
+        "freezing_room_mode": {
+          "name": "Freezer Temperature"
+        },
+        "cooloven_lamp_mode": {
+          "name": "Cooling Assist Lamp"
+        },
+        "door_alarms_mode": {
+          "name": "door_alarms_mode"
+        },
+        "coldroom_light_mode": {
+          "name": "Cold Room Light"
+        },
+        "pcroom_light_mode": {
+          "name": "PC Room Light"
+        }
+      },
+      "switch": {
+        "fast_ice_status": {
+          "name": "Fast Ice"
+        },
+        "stop_ice_status": {
+          "name": "Stop Ice"
+        },
+        "econavi_lamp_status": {
+          "name": "Econavi Lamp"
+        }
+      }
     }
   }
   
