@@ -34,5 +34,76 @@
     "abort": {
       "already_configured": "このデバイスは既に設定済みです"
     }
+  },
+  "entity": {
+    "select": {
+      "partial_mode": {
+        "name": "パーシャル/チルド切替",
+        "state": {
+          "strong": "パーシャル 強",
+          "medium": "パーシャル 中",
+          "weak": "パーシャル 弱",
+          "chilled": "チルド"
+        }
+      },
+      "cold_room_mode": {
+        "name": "冷蔵",
+        "state": {
+          "strong": "強",
+          "medium": "中",
+          "weak": "弱"
+        }
+      },
+      "freezing_room_mode": {
+        "name": "冷凍",
+        "state": {
+          "strong": "強",
+          "medium": "中",
+          "weak": "弱"
+        }
+      },
+      "cooloven_lamp_mode": {
+        "name": "「クーリングアシスト」ランプ表示",
+        "state": {
+          "off": "切",
+          "dark": "暗",
+          "light": "明"
+        }
+      },
+      "door_alarms_mode": {
+        "name": "ドアアラーム音量",
+        "state": {
+          "medium": "中",
+          "high": "大"
+        }
+      },
+      "coldroom_light_mode": {
+        "name": "冷蔵室庫内照明",
+        "state": {
+          "off": "切",
+          "dark": "暗",
+          "light": "明"
+        }
+      },
+      "pcroom_light_mode": {
+        "name": "パーシャル/チルド切替室照明",
+        "state": {
+          "off": "切",
+          "dark": "暗",
+          "light": "明"
+        }
+      }
+    },
+    "switch": {
+      "fast_ice_status": {
+        "name": "速氷"
+      },
+      "stop_ice_status": {
+        "name": "製氷停止"
+      },
+      "econavi_lamp_status": {
+        "name": "「エコナビ」ランプ表示"
+      }
+    }
   }
 }
