@@ -67,6 +67,13 @@ SELECTS: tuple[PanasonicSelectDescription, ...] = (
         status_key="door_alarms_mode",
         options=["off", "weak", "medium", "strong"],
     ),
+    PanasonicSelectDescription(
+        key="cooloven_lamp_mode",
+        name="Cooling Assist Lamp",
+        icon="mdi:lightbulb",
+        status_key="cooloven_lamp_mode",
+        options=["off", "dark", "bright"],
+    ),
 )
 
 
