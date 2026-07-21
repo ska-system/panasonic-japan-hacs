@@ -11,6 +11,7 @@ import argparse
 import json
 import sys
 from datetime import datetime
+import token
 from urllib.parse import quote
 
 import requests
@@ -149,6 +150,11 @@ def probe_endpoints(token: str, appliance_id: str) -> None:
                       "device_err_status", "firmware_current_version",
                       "firmware_latest_version", "firmware_update_status")]
             print(f"  usages={usages} → {r.status_code}  extra fields: {fields}")
+
+            print("--- ALL API DATA DUMP ---")
+            print(json.dumps(r.json(), indent=2, ensure_ascii=False))
+            print("-------------------------")
+
         except Exception as e:
             print(f"  usages={usages} → ERROR: {e}")
 
@@ -238,8 +244,8 @@ CONTROLS = [
     ("Cold room light mode",    "coldroom_light_mode",       "enum",  LAMP_MODES),
     ("PC room light mode",      "pcroom_light_mode",         "enum",  LAMP_MODES),
     ("Cool oven lamp mode",     "cooloven_lamp_mode",        "enum",  LAMP_MODES),
-    ("Cool oven mode",          "cooloven_mode",             "enum",  COOLOVEN_MODES),
-    ("Cool oven time (min)",    "cooloven_time",             "int",   None),
+    ("Cool oven mode & time",   "cooloven",                  "cooloven", COOLOVEN_MODES),
+    ("Cool oven time (min)",    "cooloven_in_seconds",             "int",   None),
     ("Cold room temp adjust",   "cold_room_mode",            "enum",  TEMP_MODES),
     ("Freezer temp adjust",     "freezing_room_mode",        "enum",  TEMP_MODES),
     ("Partial compartment mode","partial_mode",              "enum",  PARTIAL_MODES),
@@ -247,7 +253,7 @@ CONTROLS = [
     ("Door alarm mode",         "door_alarms_mode",          "enum",  DOOR_ALARM_MODES),
 ]
 
-
+9
 def print_status(status: dict) -> None:
     print("\n" + "═" * 60)
     print("  Current device status")
@@ -256,7 +262,7 @@ def print_status(status: dict) -> None:
         "operation_mode", "fast_ice_status", "stop_ice_status",
         "fresh_frozen_status", "econavi_lamp_status",
         "coldroom_light_mode", "pcroom_light_mode", "cooloven_lamp_mode",
-        "cooloven_mode", "cold_room_mode", "freezing_room_mode",
+        "cooloven_mode", "cooloven_in_seconds", "cold_room_mode", "freezing_room_mode",
         "partial_mode", "partial_freezing_room_mode", "door_alarms_mode",
         "winter_setting_status", "house_sitting_status",
         "firmware_current_version",
@@ -320,6 +326,9 @@ def main() -> None:
         if choice == "0":
             status = get_status(token, appliance_id)
             print_status(status)
+
+            probe_endpoints(token, appliance_id)
+
             continue
 
         try:
@@ -334,6 +343,53 @@ def main() -> None:
         current = status.get(field)
 
         try:
+            if kind == "cooloven":
+                curr_mode = status.get("cooloven_mode", "off")
+                curr_time = status.get("cooloven_in_seconds", 0)
+                new_mode = ask_enum("Cool oven mode", options, str(curr_mode))
+                
+                # モードが off の場合はタイマー時間を自動で 0 に設定
+                if new_mode == "off":
+                    payload = {
+                        "cooloven_mode": "off",
+                        "cooloven_time": 0,
+                        "cooloven_second": 0,
+                    }
+                    result = control(token, appliance_id, payload)
+                else:
+                    print("\n  Fetching cooloven limits (usages=3) ...")
+                    limit_url = f"{REIZO_API_BASE_URL}/devices/{_encode(appliance_id)}/status"
+                    limit_resp = requests.get(limit_url, headers=_headers(token), params={"usages": 3}, timeout=30)
+                    limit_resp.raise_for_status()
+                    
+                    settings = limit_resp.json().get("cooloven_setting_list", [])
+                    cfg = next((s for s in settings if s.get("mode") == new_mode), {})
+                    
+                    if not cfg:
+                        print(f"  ✗ Constraints for '{new_mode}' not found in API. Aborting.")
+                        continue
+                        
+                    min_m = cfg.get("lower_limit", 0)
+                    min_s = cfg.get("lower_limit_second", 0)
+                    max_m = cfg.get("upper_limit", 0)
+                    max_s = cfg.get("upper_limit_second", 0)
+                    def_m = cfg.get("default_time", 0)
+                    
+                    print(f"  [{new_mode}] Limits: Min {min_m}m {min_s}s / Max {max_m}m {max_s}s (Default: {def_m}m)")
+                    
+                    raw_min = input(f"  Enter minutes (default {def_m}): ").strip()
+                    raw_sec = input(f"  Enter seconds (default 0): ").strip()
+                    
+                    val_min = int(raw_min) if raw_min else def_m
+                    val_sec = int(raw_sec) if raw_sec else 0
+                    
+                    payload = {
+                        "cooloven_mode": new_mode,
+                        "cooloven_time": val_min,
+                        "cooloven_second": val_sec,
+                    }
+                    result = control(token, appliance_id, payload)
+
             if kind == "bool":
                 new_val = ask_bool(label, bool(current))
                 result = control(token, appliance_id, {field: new_val})
