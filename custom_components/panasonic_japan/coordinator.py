@@ -30,6 +30,11 @@ class PanasonicDataUpdateCoordinator(DataUpdateCoordinator):
         self.config_entry = config_entry
         self.hass = hass
 
+        # クーリングアシストの設定値を一時的に保持するキャッシュ変数
+        self.pending_cooloven_mode = "quench"
+        self.pending_cooloven_time = 0
+        self.pending_cooloven_second = 0
+
         super().__init__(
             hass,
             _LOGGER,
