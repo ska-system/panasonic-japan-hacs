@@ -91,6 +91,9 @@ async def async_setup_entry(
         for description in SELECTS
         if description.status_key in device_status
     ]
+
+    entities.append(PanasonicCoolovenModeSelect(coordinator))
+
     async_add_entities(entities)
 
 
@@ -132,3 +135,32 @@ class PanasonicSelect(CoordinatorEntity[PanasonicDataUpdateCoordinator], SelectE
             {self.entity_description.status_key: option},
         )
         await self.coordinator.async_request_refresh()
+
+class PanasonicCoolovenModeSelect(CoordinatorEntity[PanasonicDataUpdateCoordinator], SelectEntity):
+    """A mode selector for the pending cooloven setting (Cached)."""
+
+    _attr_has_entity_name = True
+    _attr_icon = "mdi:snowflake"
+    _attr_options = ["quench", "cold", "frozen", "off"]
+    _attr_name = "Cooling Assist Mode"
+
+    def __init__(self, coordinator: PanasonicDataUpdateCoordinator) -> None:
+        """Initialize."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.appliance_id}_pending_cooloven_mode"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, coordinator.appliance_id)},
+            name=f"Panasonic Fridge ({coordinator.product_code})",
+            manufacturer="Panasonic",
+            model=coordinator.product_code,
+        )
+
+    @property
+    def current_option(self) -> str | None:
+        """Return current selected option from coordinator cache."""
+        return self.coordinator.pending_cooloven_mode
+
+    async def async_select_option(self, option: str) -> None:
+        """Update the cached mode without sending to the API immediately."""
+        self.coordinator.pending_cooloven_mode = option
+        self.async_write_ha_state()
