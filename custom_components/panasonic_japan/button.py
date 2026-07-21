@@ -50,10 +50,11 @@ class PanasonicCoolovenExecuteButton(CoordinatorEntity[PanasonicDataUpdateCoordi
     async def async_press(self) -> None:
         """Send cached cooloven parameters to the API."""
         payload = {
-            "cooloven_mode": self.coordinator.pending_cooloven_mode,
-            "cooloven_time": int(self.coordinator.pending_cooloven_time),
-            "cooloven_second": int(self.coordinator.pending_cooloven_second),
+            "mode": self.coordinator.pending_cooloven_mode,
         }
+        if self.coordinator.pending_cooloven_mode != "off":
+            payload["minute"] = self.coordinator.pending_cooloven_time
+            payload["second"] = self.coordinator.pending_cooloven_second
         
         await self.hass.async_add_executor_job(
             self.coordinator.api.control_device,
