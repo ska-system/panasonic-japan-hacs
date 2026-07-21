@@ -1,0 +1,29 @@
+set_cooloven:
+  name: "Set Cool Oven"
+  description: "Sets the cooling assist mode and operating time."
+  fields:
+    mode:
+      name: "Mode"
+      description: "Cooling mode"
+      required: true
+      selector:
+        select:
+          options: ["quench", "cold", "frozen", "off"]
+    time:
+      name: "Time (Minutes)"
+      description: "Operating time in minutes"
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 60
+    second:
+      name: "Time (Seconds)"
+      description: "Operating time in seconds"
+      required: false
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 50
+          step: 10
