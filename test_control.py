@@ -351,9 +351,7 @@ def main() -> None:
                 # モードが off の場合はタイマー時間を自動で 0 に設定
                 if new_mode == "off":
                     payload = {
-                        "cooloven_mode": "off",
-                        "cooloven_time": 0,
-                        "cooloven_second": 0,
+                        "cooloven_mode": "off"
                     }
                     result = control(token, appliance_id, payload)
                 else:
