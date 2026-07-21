@@ -5,7 +5,7 @@ import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
 from .coordinator import PanasonicDataUpdateCoordinator
@@ -13,7 +13,13 @@ from .push import PanasonicPushHandler
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH, Platform.SELECT]
+PLATFORMS: list[Platform] = [
+    Platform.SENSOR, 
+    Platform.SWITCH, 
+    Platform.SELECT, 
+    Platform.NUMBER, 
+    Platform.BUTTON
+]
 
 _PUSH_KEY = f"{DOMAIN}_push"
 
@@ -24,25 +30,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await coordinator.async_config_entry_first_refresh()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
-
-    async def handle_set_cooloven(call: ServiceCall):
-        mode = call.data.get("mode")
-        time_min = call.data.get("time", 0)
-        time_sec = call.data.get("second", 0)
-
-        payload = {
-            "cooloven_mode": mode,
-            "cooloven_time": int(time_min),
-            "cooloven_second": int(time_sec)
-        }
-        await hass.async_add_executor_job(
-            coordinator.api.control_device, 
-            coordinator.appliance_id, 
-            payload
-        )
-        await coordinator.async_request_refresh()
-
-    hass.services.async_register(DOMAIN, "set_cooloven", handle_set_cooloven)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -64,8 +51,5 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         if push_handler:
             await push_handler.async_stop()
-
-        if hass.services.has_service(DOMAIN, "set_cooloven"):
-            hass.services.async_remove(DOMAIN, "set_cooloven")
 
     return unload_ok
