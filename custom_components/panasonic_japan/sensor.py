@@ -142,3 +142,11 @@ class PanasonicFirmwareSensor(PanasonicSensor):
             }
         )
         return attrs
+
+class PanasonicCoolovenStateSensor(CoordinatorEntity, SensorEntity):
+    """Representation of a Panasonic Cooloven State Sensor."""
+
+    @property
+    def native_value(self) -> str:
+        """Return the state of the sensor."""
+        return self.coordinator.data.get("cooloven_mode", "off")
