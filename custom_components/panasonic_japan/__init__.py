@@ -63,7 +63,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             "/panasonic_japan_assets/panasonic-cooloven-card.js",
             hass.config.path("custom_components/panasonic_japan/frontend/panasonic-cooloven-card.js"),
             cache_headers=False,
-        )
+        ),
+        StaticPathConfig(
+            "/panasonic_japan_assets/translations",
+            hass.config.path("custom_components/panasonic_japan/translations"),
+            cache_headers=False,
+        ),
     ])
 
     return True
