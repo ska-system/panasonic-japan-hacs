@@ -16,7 +16,8 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS: list[Platform] = [
     Platform.SENSOR, 
     Platform.SWITCH, 
-    Platform.SELECT
+    Platform.SELECT,
+    Platform.BUTTON,
 ]
 
 _PUSH_KEY = f"{DOMAIN}_push"
