@@ -5,7 +5,7 @@ import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, ServiceCall
 
 from .const import DOMAIN
 from .coordinator import PanasonicDataUpdateCoordinator
@@ -16,9 +16,7 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS: list[Platform] = [
     Platform.SENSOR, 
     Platform.SWITCH, 
-    Platform.SELECT, 
-    Platform.NUMBER, 
-    Platform.BUTTON
+    Platform.SELECT
 ]
 
 _PUSH_KEY = f"{DOMAIN}_push"
@@ -31,6 +29,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
+    async def handle_set_cooloven(call: ServiceCall):
+        mode = call.data.get("mode")
+        time_min = call.data.get("time", 0)
+        time_sec = call.data.get("second", 0)
+
+        payload = {
+            "cooloven_mode": mode,
+        }
+        if mode != "off":
+            payload["cooloven_time"] = int(time_min)
+            payload["cooloven_second"] = int(time_sec)
+
+        await hass.async_add_executor_job(
+            coordinator.api.control_device, 
+            coordinator.appliance_id, 
+            payload
+        )
+        await coordinator.async_request_refresh()
+
+    hass.services.async_register(DOMAIN, "set_cooloven", handle_set_cooloven)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Start push notification listener (non-blocking; failure is logged, not fatal)

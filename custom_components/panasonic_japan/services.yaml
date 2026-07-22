@@ -1,0 +1,31 @@
+set_cooloven:
+  target:
+    entity:
+      - integration: panasonic_japan
+  fields:
+    mode:
+      required: true
+      example: quench
+      selector:
+        select:
+          options:
+            - quench
+            - cold
+            - frozen
+            - off
+    time:
+      required: true
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 60
+          step: 1
+    second:
+      required: true
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 50
+          step: 10
