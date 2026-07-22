@@ -27,6 +27,7 @@ async def async_setup_entry(
         PanasonicCostReductionSensor(coordinator),
         PanasonicOperationModeSensor(coordinator),
         PanasonicFirmwareSensor(coordinator),
+        PanasonicCoolovenStateSensor(coordinator),
     ]
 
     async_add_entities(sensors)
