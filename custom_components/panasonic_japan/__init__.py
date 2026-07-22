@@ -57,6 +57,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(_PUSH_KEY, {})[entry.entry_id] = push_handler
     hass.async_create_task(push_handler.async_start())
 
+    hass.http.async_register_static_path(
+        "/panasonic_japan_assets/panasonic-cooloven-card.js",
+        hass.config.path("custom_components/panasonic_japan/frontend/panasonic-cooloven-card.js"),
+        cache_headers=False,
+    )
+
     return True
 
 
