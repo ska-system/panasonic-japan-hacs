@@ -12,7 +12,7 @@ set_cooloven:
             - quench
             - cold
             - frozen
-            - off
+            - "off"
     time:
       required: true
       default: 0
