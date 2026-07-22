@@ -1,75 +1,121 @@
 {
-    "config": {
-      "step": {
-        "reconfigure_callback": {
-        "title": "Re-authenticate Panasonic Japan",
-        "description": "Re-authenticate your Panasonic account to update the access token.\n\n**Step 1:** Click the login URL below to open the login page in your browser:\n\n**Login URL:**\n`{login_url}`\n\n**Step 2:** After logging in, copy the entire callback URL and paste it below.",
+  "config": {
+    "step": {
+      "reconfigure_callback": {
+      "title": "Re-authenticate Panasonic Japan",
+      "description": "Re-authenticate your Panasonic account to update the access token.\n\n**Step 1:** Click the login URL below to open the login page in your browser:\n\n**Login URL:**\n`{login_url}`\n\n**Step 2:** After logging in, copy the entire callback URL and paste it below.",
+      "data": {
+        "callback_url": "Callback URL"
+      },
+      "data_description": {
+        "callback_url": "Paste the complete callback URL you received after logging in"
+      }
+    },
+    "callback": {
+        "title": "Panasonic Japan Authentication",
+        "description": "**Step 1:** Click the login URL below to open the login page in your browser (if the page does not open, please delete the cookie for auth.digital.panasonic.com):\n\n**Login URL:**\n`{login_url}`\n\n**Step 2:** After logging in with your Panasonic account, you'll be redirected to a callback URL (if not redirected, open developer tools with F12 and copy the failing URL).\n\n**Step 3:** Copy the entire callback URL (it will look like `com.panasonic.jp.kitchenpocket.auth0://auth.digital.panasonic.com/android/com.panasonic.jp.kitchenpocket/callback?code=...&state=...`) and paste it in the field below.",
         "data": {
           "callback_url": "Callback URL"
         },
         "data_description": {
           "callback_url": "Paste the complete callback URL you received after logging in"
         }
-      },
-      "callback": {
-          "title": "Panasonic Japan Authentication",
-          "description": "**Step 1:** Click the login URL below to open the login page in your browser:\n\n**Login URL:**\n`{login_url}`\n\n**Step 2:** After logging in with your Panasonic account, you'll be redirected to a callback URL.\n\n**Step 3:** Copy the entire callback URL (it will look like `com.panasonic.jp.kitchenpocket.auth0://auth.digital.panasonic.com/android/com.panasonic.jp.kitchenpocket/callback?code=...&state=...`) and paste it in the field below.",
-          "data": {
-            "callback_url": "Callback URL"
-          },
-          "data_description": {
-            "callback_url": "Paste the complete callback URL you received after logging in"
-          }
-        }
-      },
-      "error": {
-        "callback_url_required": "Please provide the callback URL",
-        "invalid_callback_url": "Invalid callback URL format. Please check and try again.",
-        "token_exchange_failed": "Failed to exchange authorization code for tokens. The code may have expired. Please try again.",
-        "no_access_token": "No access token received from authentication server",
-        "invalid_token": "The access token is invalid or expired",
-        "no_fridge_found": "No fridge device found in your account",
-        "unknown": "Unexpected error occurred"
-      },
-      "abort": {
-        "already_configured": "This device is already configured"
       }
     },
-    "entity": {
-      "select": {
-        "partial_mode": {
-          "name": "Partial Compartment Mode"
-        },
-        "cold_room_mode": {
-          "name": "Cold Room Temperature"
-        },
-        "freezing_room_mode": {
-          "name": "Freezer Temperature"
-        },
-        "cooloven_lamp_mode": {
-          "name": "Cooling Assist Lamp"
-        },
-        "door_alarms_mode": {
-          "name": "door_alarms_mode"
-        },
-        "coldroom_light_mode": {
-          "name": "Cold Room Light"
-        },
-        "pcroom_light_mode": {
-          "name": "PC Room Light"
+    "error": {
+      "callback_url_required": "Please provide the callback URL",
+      "invalid_callback_url": "Invalid callback URL format. Please check and try again.",
+      "token_exchange_failed": "Failed to exchange authorization code for tokens. The code may have expired. Please try again.",
+      "no_access_token": "No access token received from authentication server",
+      "invalid_token": "The access token is invalid or expired",
+      "no_fridge_found": "No fridge device found in your account",
+      "unknown": "Unexpected error occurred"
+    },
+    "abort": {
+      "already_configured": "This device is already configured"
+    }
+  },
+  "entity": {
+    "select": {
+      "partial_mode": {
+        "name": "Partial Compartment Mode",
+        "state": {
+          "strong": "Partial Strong",
+          "medium": "Partial Medium",
+          "weak": "Partial Weak",
+          "chilled": "Chilled"
         }
       },
-      "switch": {
-        "fast_ice_status": {
-          "name": "Fast Ice"
-        },
-        "stop_ice_status": {
-          "name": "Stop Ice"
-        },
-        "econavi_lamp_status": {
-          "name": "Econavi Lamp"
+      "cold_room_mode": {
+        "name": "Cold Room Temperature",
+        "state": {
+          "strong": "Strong",
+          "medium": "Medium",
+          "weak": "Weak"
+        }
+      },
+      "freezing_room_mode": {
+        "name": "Freezer Temperature",
+        "state": {
+          "strong": "Strong",
+          "medium": "Medium",
+          "weak": "Weak"
+        }
+      },
+      "cooloven_lamp_mode": {
+        "name": "Cooling Assist Lamp",
+        "state": {
+          "off": "Off",
+          "dark": "Dark",
+          "bright": "Bright"
+        }
+      },
+      "door_alarms_mode": {
+        "name": "door_alarms_mode",
+        "state": {
+          "medium": "Medium",
+          "big": "High"
+        }
+      },
+      "coldroom_light_mode": {
+        "name": "Cold Room Light",
+        "state": {
+          "off": "Off",
+          "dark": "Dark",
+          "bright": "Bright"
+        }
+      },
+      "pcroom_light_mode": {
+        "name": "PC Room Light",
+        "state": {
+          "off": "Off",
+          "dark": "Dark",
+          "bright": "Bright"
         }
       }
+    },
+    "switch": {
+      "fast_ice_status": {
+        "name": "Fast Ice"
+      },
+      "stop_ice_status": {
+        "name": "Stop Ice"
+      },
+      "econavi_lamp_status": {
+        "name": "Econavi Lamp"
+      }
     }
+  },
+  "card": {
+    "title": "Cooling Assist Control",
+    "mode": "Mode:",
+    "off": "Off",
+    "quench": "Quench (Rapid Cooling)",
+    "cold": "Cold (Rapid Cooling)" ,
+    "freeze": "Freeze (Rapid Freezing)",    
+    "time": "Time (Minutes):",
+    "second": "Seconds:",
+    "exec": "Execute"
   }
+}
   
