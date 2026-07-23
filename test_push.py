@@ -44,16 +44,41 @@ API_KEY           = "x6pdB3r5z2eqDCgwf0gF1Ffre7Au7Km3YoFY0fDh"
 
 CREDENTIALS_FILE = Path("push_credentials.json")
 
-PUSH_KIND_DOOR           = "alert_door_open_info"
-PUSH_KIND_WATER_SHORTAGE = "alert_water_shortage"
-PUSH_KIND_ICE_COMPLETED  = "alert_ice_completed"
-PUSH_KIND_ERROR          = "alert_error_occured"
+# PUSH_KIND_DOOR           = "alert_door_open_info"
+# PUSH_KIND_WATER_SHORTAGE = "alert_water_shortage"
+# PUSH_KIND_ICE_COMPLETED  = "alert_ice_completed"
+# PUSH_KIND_ERROR          = "alert_error_occured"
+
+# KIND_LABELS = {
+#     PUSH_KIND_DOOR:           "🚪  Door left open (5 min)",
+#     PUSH_KIND_WATER_SHORTAGE: "💧  Water shortage",
+#     PUSH_KIND_ICE_COMPLETED:  "🧊  Ice making completed",
+#     PUSH_KIND_ERROR:          "⚠️  Error occurred",
+# }
 
 KIND_LABELS = {
-    PUSH_KIND_DOOR:           "🚪  Door left open (5 min)",
-    PUSH_KIND_WATER_SHORTAGE: "💧  Water shortage",
-    PUSH_KIND_ICE_COMPLETED:  "🧊  Ice making completed",
-    PUSH_KIND_ERROR:          "⚠️  Error occurred",
+    "alert_error_occured": "Error occurred",
+    "alert_cooloven_canceled": "Cooling assist canceled",
+    "alert_cooloven_completed": "Cooling assist completed",
+    "alert_cooloven_changed": "Cooling assist changed",
+    "alert_door_open_info": "Door left open (5 min)",
+    "alert_confirm_electric_bill": "Confirm electric bill",
+    "alert_firmware_update_ready": "Firmware update ready",
+    "alert_firmware_update_completed": "Firmware update completed",
+    "alert_ice_completed": "Ice making completed",
+    "alert_important_message": "Important message",
+    "outage_prepare_start": "Outage prepare start",
+    "alert_outage_prepare_started": "Outage prepare started",
+    "alert_outage_prepare_stop": "Outage prepare stop",
+    "out_could_start": "Out could start",
+    "alert_partial_half_defrost_cancel": "Partial half defrost cancel",
+    "alert_partial_half_defrost_five_start": "Partial half defrost five start",
+    "alert_partial_half_defrost_seven_start": "Partial half defrost seven start",
+    "alert_partial_half_defrost_stop": "Partial half defrost stop",
+    "shop_could_start": "Shop could start",
+    "alert_water_shortage": "Water shortage",
+    "alert_winter_setting_start": "Winter setting start",
+    "alert_winter_setting_stop": "Winter setting stop",
 }
 
 
@@ -159,10 +184,12 @@ def save_credentials(creds: dict) -> None:
 # ── FCM message callback ───────────────────────────────────────────────────────
 
 def on_message(data: dict, sender_id: str, context=None) -> None:
-    kind        = data.get("kind", "")
-    appliance   = data.get("appliance_id", "")
-    title       = data.get("title", "")
-    body        = data.get("body", "")
+    inner_data = data.get("data", {}) if isinstance(data.get("data"), dict) else {}
+    
+    kind = data.get("kind", "") or inner_data.get("kind", "") or inner_data.get("service_id", "")
+    appliance = data.get("appliance_id", "") or inner_data.get("appliance_id", "")
+    title = data.get("title", "") or inner_data.get("title", "")
+    body = data.get("body", "") or inner_data.get("message", "") or inner_data.get("body", "")
 
     print("\n" + "═" * 60)
     print(f"  📨  Push message received!")
