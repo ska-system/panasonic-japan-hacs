@@ -1,0 +1,19 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": [
+                "--token", "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IkloemZwMThvRGRUUFZSUHdEbFVjUSJ9.eyJodHRwczovL2NsdWIucGFuYXNvbmljLmpwL3VzZXJpbmZvL2FwcF9tZXRhZGF0YSI6eyJhdXRoX2p0aSI6IjZjYjAzMDcwLWY4OGItNDY1ZS05M2I0LTRjMTE1YzFlYzIxNCIsImNvbW1vbl9jb250ZW50X3VyaSI6Imh0dHBzOi8vYXV0aC1jcC5kaWdpdGFsLnBhbmFzb25pYy5jb20vIiwibWVtYmVyX2FncmVlbWVudF9kYXRlIjoiMjAyMS8xMC8zMSAwNzo1MDo0NSswOTAwIiwibWVtYmVyX2xldmVsIjoiMCIsIm1lbWJlcl91c2VyX2lkIjoiWjYxWC9SWDBYVkM5SDJWMDZOWndhdz09IiwicmVkaXJlY3RfdXJpIjoiY29tLnBhbmFzb25pYy5qcC5raXRjaGVucG9ja2V0LmF1dGgwOi8vYXV0aC5kaWdpdGFsLnBhbmFzb25pYy5jb20vYW5kcm9pZC9jb20ucGFuYXNvbmljLmpwLmtpdGNoZW5wb2NrZXQvY2FsbGJhY2siLCJzc29fZXhwaXJlIjoiZW5vdWdoIn0sImh0dHBzOi8vZGlnaXRhbC5wYW5hc29uaWMuY29tIjp7Imxhc3RfbG9naW5fcHJvdmlkZXIiOiJhdXRoMCIsInBkcF91c2VyX2lkIjoiMWU3MGIwMTQxZWJhYWJhYTI3MDZlZmMyYTdhYmM3YTAyNjIwMDViM2JkYmIwMzI2ODNhZmRiOGE5NTEwYjFlNSIsInByb3ZpZGVyIjoiQ0xVQiBQYW5hc29uaWMiLCJ1c2VyX2NvdW50cnkiOiJKUCIsInVzZXJfaWQiOiJaNjFYL1JYMFhWQzlIMlYwNk5ad2F3PT0iLCJ1c2VyX3N0YXR1cyI6InZhbGlkIn0sImlzcyI6Imh0dHBzOi8vYXV0aC5kaWdpdGFsLnBhbmFzb25pYy5jb20vIiwic3ViIjoiYXV0aDB8MWU3MGIwMTQxZWJhYWJhYTI3MDZlZmMyYTdhYmM3YTAyNjIwMDViM2JkYmIwMzI2ODNhZmRiOGE5NTEwYjFlNSIsImF1ZCI6WyJodHRwczovL2NsdWIucGFuYXNvbmljLmpwL3c3VUkzaUxCeUZGejNHT2o2RWY2QkNIZlBjek9jc3k4L2FwaS92MS8iLCJodHRwczovL3BkcGF1dGgtYTEucGFuYXNvbmljLmF1dGgwLmNvbS91c2VyaW5mbyJdLCJpYXQiOjE3ODQ3MjQ1NTAsImV4cCI6MTc4NDgxMDk1MCwic2NvcGUiOiJvcGVuaWQga2l0Y2hlbnBvY2tldC5zZXJ2aWNlIGVhdHBpY2suc2VydmljZSBzbWFydHJmX3ByZC5jb250cm9sIG9mZmxpbmVfYWNjZXNzIiwiYXpwIjoidzdVSTNpTEJ5RkZ6M0dPajZFZjZCQ0hmUGN6T2NzeTgifQ.13bpDoYMoBnXN_bDEZA0mz3QDUJCJirMW07q-ohIWsttDG6yZO9IhPxP0bF0p2cmmO-LIpp-EbZYb5Nm0GuXwSDw_MNrkL6H4WCVlMm3SJqoga0MOlgbnjzIaFUqoZT_Azp8gWSUaW18gtbq5Ll1fTSYOVFhubaV9NP60D8aHYBwmhRPvZpYwAVBM-_SyF9xm2yiYs2dgSefYOjHf-A2u-QBRdtYv5ZcjHyVcW6emUvQ7_r4l723HLsQMw8MTUKdYQ0prlfGB7GMGOcWrrrp3Gx0BVb1_doWqFb-b14nlrnTTMCuq6ywYraU_A7Y44QlND-E4xEbMMsOzt0q8yj1dA"
+            ]
+        }
+    ]
+}

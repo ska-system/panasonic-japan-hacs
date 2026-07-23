@@ -68,18 +68,48 @@ class PanasonicCoolovenCard extends HTMLElement {
       const timeInput = this.querySelector('#time-input');
       const secInput = this.querySelector('#sec-input');
       
-      const time = parseInt(timeInput.value, 10);
-      const second = parseInt(secInput.value, 10);
+      let time = parseInt(timeInput.value, 10);
+      let second = parseInt(secInput.value, 10);
       
-      if (mode === 'quench' && (isNaN(time) || time === 0) && (isNaN(second) || second === 0)) {
+      if (isNaN(time)) time = 0;
+      if (isNaN(second)) second = 0;
+
+      // モードごとの制限適用
+      let minTime = 0, maxTime = 60;
+      let maxSec = 50;
+
+      if (mode === 'quench') {
+        minTime = 0; maxTime = 10;
+        maxSec = 50;
+        // 秒を10秒単位に切り捨て、上限クランプ
+        second = Math.floor(second / 10) * 10;
+        if (second < 0) second = 0;
+        if (second > maxSec) second = maxSec;
+      } else if (mode === 'cold') {
+        minTime = 10; maxTime = 30;
+      } else if (mode === 'freeze' || mode === 'frozen') {
+        minTime = 30; maxTime = 60;
+      }
+
+      // 分の上下限クランプ
+      if (time < minTime) time = minTime;
+      if (time > maxTime) time = maxTime;
+
+      // 画面上の入力値も同期して書き換える
+      timeInput.value = time;
+      if (secContainer.style.display !== 'none') {
+        secInput.value = second;
+      }
+
+      if (mode === 'quench' && time === 0 && second === 0) {
         alert('Time and seconds cannot both be 0 in quench mode.');
         return;
       }
       
       this._hass.callService('panasonic_japan', 'set_cooloven', {
         mode: mode,
-        time: timeContainer.style.display !== 'none' && !isNaN(time) ? time : 0,
-        second: secContainer.style.display !== 'none' && !isNaN(second) ? second : 0
+        time: timeContainer.style.display !== 'none' ? time : 0,
+        second: secContainer.style.display !== 'none' ? second : 0
       });
     });
 
@@ -155,5 +185,5 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: 'panasonic-cooloven-card',
   name: 'Panasonic Cooloven Card',
-  description: 'Custom card with dynamic input constraints based on mode.'
+  description: 'Custom card with manual input clamping and truncation logic.'
 });
