@@ -9,6 +9,9 @@ from homeassistant.core import HomeAssistant
 
 from .const import (
     DOMAIN,
+    EVENT_COOLOVEN_CANCELED,
+    EVENT_COOLOVEN_COMPLETED,
+    EVENT_COOLOVEN_CHANGED,
     EVENT_DOOR,
     EVENT_ERROR,
     EVENT_ICE_COMPLETED,
@@ -18,10 +21,13 @@ from .const import (
     FIREBASE_APP_ID,
     FIREBASE_PROJECT_ID,
     FIREBASE_SENDER_ID,
+    PUSH_KIND_COOLOVEN_CANCELED,
+    PUSH_KIND_COOLOVEN_COMPLETED,
     PUSH_KIND_DOOR,
     PUSH_KIND_ERROR,
     PUSH_KIND_ICE_COMPLETED,
     PUSH_KIND_WATER_SHORTAGE,
+    PUSH_KIND_COOLOVEN_CHANGED,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -31,6 +37,9 @@ _KIND_TO_EVENT = {
     PUSH_KIND_WATER_SHORTAGE: EVENT_WATER_SHORTAGE,
     PUSH_KIND_ICE_COMPLETED:  EVENT_ICE_COMPLETED,
     PUSH_KIND_ERROR:          EVENT_ERROR,
+    PUSH_KIND_COOLOVEN_COMPLETED: EVENT_COOLOVEN_COMPLETED,
+    PUSH_KIND_COOLOVEN_CANCELED:  EVENT_COOLOVEN_CANCELED,
+    PUSH_KIND_COOLOVEN_CHANGED:   EVENT_COOLOVEN_CHANGED,
 }
 
 
@@ -128,16 +137,20 @@ class PanasonicPushHandler:
 
     def _on_message(self, data: dict[str, Any], sender_id: str, context: Any = None) -> None:
         """Handle an incoming FCM push message from Panasonic."""
-        kind: str = data.get("kind", "")
-        appliance_id: str = data.get("appliance_id", "")
+        inner_data = data.get("data", {}) if isinstance(data.get("data"), dict) else {}
+        
+        kind = data.get("kind", "") or inner_data.get("kind", "") or inner_data.get("service_id", "")
+        appliance_id = data.get("appliance_id", "") or inner_data.get("appliance_id", "")
+        title = data.get("title", "") or inner_data.get("title", "")
+        body = data.get("body", "") or inner_data.get("message", "") or inner_data.get("body", "")
 
         _LOGGER.debug("Push received: kind=%s appliance_id=%s", kind, appliance_id)
 
         event_data = {
             "kind": kind,
             "appliance_id": appliance_id,
-            "title": data.get("title", ""),
-            "body": data.get("body", ""),
+            "title": title,
+            "body": body,
         }
 
         event_type = _KIND_TO_EVENT.get(kind, EVENT_PUSH)
