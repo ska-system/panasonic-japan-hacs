@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -22,6 +23,7 @@ class PanasonicSelectDescription(SelectEntityDescription):
     """Describe a Panasonic fridge select entity."""
     status_key: str = ""
     options: list[str] = field(default_factory=list)
+    entity_category: EntityCategory | None = None
 
 
 SELECTS: tuple[PanasonicSelectDescription, ...] = (
@@ -74,6 +76,14 @@ SELECTS: tuple[PanasonicSelectDescription, ...] = (
         status_key="cooloven_lamp_mode",
         options=["off", "dark", "bright"],
     ),
+    PanasonicSelectDescription(
+        key="cooling_assist_mode",
+        translation_key="cooling_assist_mode",
+        icon="mdi:snowflake",
+        status_key="",
+        options=["off", "quench", "cold", "frozen"],
+        entity_category=EntityCategory.CONFIG,
+    ),
 )
 
 
@@ -86,11 +96,13 @@ async def async_setup_entry(
     coordinator: PanasonicDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     device_status = coordinator.data.get("device_status", {})
-    entities = [
-        PanasonicSelect(coordinator, description)
-        for description in SELECTS
-        if description.status_key in device_status
-    ]
+    entities = []
+    for description in SELECTS:
+        if description.status_key:
+            if description.status_key in device_status:
+                entities.append(PanasonicSelect(coordinator, description))
+        else:
+            entities.append(PanasonicSelect(coordinator, description))
 
     async_add_entities(entities)
 
@@ -111,25 +123,35 @@ class PanasonicSelect(CoordinatorEntity[PanasonicDataUpdateCoordinator], SelectE
         self.entity_description = description
         self._attr_unique_id = f"{coordinator.appliance_id}_{description.key}"
         self._attr_options = description.options
+        if description.entity_category:
+            self._attr_entity_category = description.entity_category
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.appliance_id)},
             name=f"Panasonic Fridge ({coordinator.product_code})",
             manufacturer="Panasonic",
             model=coordinator.product_code,
         )
+        if not description.status_key and description.options:
+            self._attr_current_option = description.options[0]
 
     @property
     def current_option(self) -> str | None:
         """Return current selected option."""
-        return self.coordinator.data.get("device_status", {}).get(
-            self.entity_description.status_key
-        )
+        if self.entity_description.status_key:
+            return self.coordinator.data.get("device_status", {}).get(
+                self.entity_description.status_key
+            )
+        return self._attr_current_option
 
     async def async_select_option(self, option: str) -> None:
-        """Send selected option to the fridge."""
-        await self.hass.async_add_executor_job(
-            self.coordinator.api.control_device,
-            self.coordinator.appliance_id,
-            {self.entity_description.status_key: option},
-        )
-        await self.coordinator.async_request_refresh()
+        """Send selected option to the fridge or update local state."""
+        if self.entity_description.status_key:
+            await self.hass.async_add_executor_job(
+                self.coordinator.api.control_device,
+                self.coordinator.appliance_id,
+                {self.entity_description.status_key: option},
+            )
+            await self.coordinator.async_request_refresh()
+        else:
+            self._attr_current_option = option
+            self.async_write_ha_state()
