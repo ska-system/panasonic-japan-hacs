@@ -43,6 +43,7 @@ NUMBERS: tuple[PanasonicNumberDescription, ...] = (
         native_step=1.0,
         native_unit_of_measurement=UnitOfTime.MINUTES,
         entity_category=EntityCategory.CONFIG,
+        mode=NumberMode.BOX,
     ),
     PanasonicNumberDescription(
         key="cooling_assist_second",
@@ -53,6 +54,7 @@ NUMBERS: tuple[PanasonicNumberDescription, ...] = (
         native_step=10.0,
         native_unit_of_measurement=UnitOfTime.SECONDS,
         entity_category=EntityCategory.CONFIG,
+        mode=NumberMode.BOX,
     ),
 )
 
