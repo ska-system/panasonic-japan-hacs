@@ -102,6 +102,9 @@ class PanasonicNumber(CoordinatorEntity[PanasonicDataUpdateCoordinator], NumberE
         )
         self._attr_native_value = 0.0
 
+    async def async_added_to_hass(self) -> None:
+        """Run when entity about to be added to hass."""
+        await super().async_added_to_hass()
         if DOMAIN not in self.hass.data:
             self.hass.data[DOMAIN] = {}
         if self._entry_id not in self.hass.data[DOMAIN]:
@@ -109,7 +112,7 @@ class PanasonicNumber(CoordinatorEntity[PanasonicDataUpdateCoordinator], NumberE
         
         if "number_entities" not in self.hass.data[DOMAIN][self._entry_id]:
             self.hass.data[DOMAIN][self._entry_id]["number_entities"] = {}
-        self.hass.data[DOMAIN][self._entry_id]["number_entities"][description.key] = self
+        self.hass.data[DOMAIN][self._entry_id]["number_entities"][self.entity_description.key] = self
 
     def _get_current_mode(self) -> str:
         """Get current cooling assist mode."""

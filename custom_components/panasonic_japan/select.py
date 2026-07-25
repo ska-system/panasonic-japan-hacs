@@ -135,12 +135,16 @@ class PanasonicSelect(CoordinatorEntity[PanasonicDataUpdateCoordinator], SelectE
         )
         if not description.status_key and description.options:
             self._attr_current_option = description.options[0]
-            if description.key == "cooling_assist_mode":
-                if DOMAIN not in self.hass.data:
-                    self.hass.data[DOMAIN] = {}
-                if self._entry_id not in self.hass.data[DOMAIN]:
-                    self.hass.data[DOMAIN][self._entry_id] = {}
-                self.hass.data[DOMAIN][self._entry_id]["cooling_assist_mode"] = description.options[0]
+
+    async def async_added_to_hass(self) -> None:
+        """Run when entity about to be added to hass."""
+        await super().async_added_to_hass()
+        if not self.entity_description.status_key and self.entity_description.key == "cooling_assist_mode":
+            if DOMAIN not in self.hass.data:
+                self.hass.data[DOMAIN] = {}
+            if self._entry_id not in self.hass.data[DOMAIN]:
+                self.hass.data[DOMAIN][self._entry_id] = {}
+            self.hass.data[DOMAIN][self._entry_id]["cooling_assist_mode"] = self._attr_current_option
 
     @property
     def current_option(self) -> str | None:
