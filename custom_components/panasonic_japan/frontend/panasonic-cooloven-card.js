@@ -31,7 +31,7 @@ class PanasonicCoolovenCard extends HTMLElement {
   async render() {
     const t = await this.loadTranslations();
     
-    this.innerHTML = `
+  this.innerHTML = `
       <ha-card header="${t.title || ''}">
         <div style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
           <div>
@@ -43,13 +43,13 @@ class PanasonicCoolovenCard extends HTMLElement {
               <option value="frozen">${t.frozen || 'Frozen'}</option>
             </select>
           </div>
-          <div id="time-container">
-            <label id="lbl-time" style="display: block; margin-bottom: 4px; font-weight: 500;">${t.time || ''}</label>
-            <input type="number" id="time-input" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--divider-color); background: var(--card-background-color); color: var(--primary-text-color);">
+          <div id="time-container" style="display: flex; justify-content: space-between; align-items: center;">
+            <label id="lbl-time" style="font-weight: 500;">${t.time || ''}</label>
+            <input type="number" id="time-input" style="width: 100px; padding: 8px; text-align: right; border-radius: 4px; border: 1px solid var(--divider-color); background: var(--card-background-color); color: var(--primary-text-color);">
           </div>
-          <div id="sec-container">
-            <label id="lbl-sec" style="display: block; margin-bottom: 4px; font-weight: 500;">${t.second || ''}</label>
-            <input type="number" id="sec-input" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--divider-color); background: var(--card-background-color); color: var(--primary-text-color);">
+          <div id="sec-container" style="display: flex; justify-content: space-between; align-items: center;">
+            <label id="lbl-sec" style="font-weight: 500;">${t.second || ''}</label>
+            <input type="number" id="sec-input" style="width: 100px; padding: 8px; text-align: right; border-radius: 4px; border: 1px solid var(--divider-color); background: var(--card-background-color); color: var(--primary-text-color);">
           </div>
           <mwc-button raised id="exec-btn" style="margin-top: 8px;">${t.exec || 'Execute'}</mwc-button>
         </div>
