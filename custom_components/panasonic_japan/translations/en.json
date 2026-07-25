@@ -2,16 +2,16 @@
   "config": {
     "step": {
       "reconfigure_callback": {
-      "title": "Re-authenticate Panasonic Japan",
-      "description": "Re-authenticate your Panasonic account to update the access token.\n\n**Step 1:** Click the login URL below to open the login page in your browser:\n\n**Login URL:**\n`{login_url}`\n\n**Step 2:** After logging in, copy the entire callback URL and paste it below.",
-      "data": {
-        "callback_url": "Callback URL"
+        "title": "Re-authenticate Panasonic Japan",
+        "description": "Re-authenticate your Panasonic account to update the access token.\n\n**Step 1:** Click the login URL below to open the login page in your browser:\n\n**Login URL:**\n`{login_url}`\n\n**Step 2:** After logging in, copy the entire callback URL and paste it below.",
+        "data": {
+          "callback_url": "Callback URL"
+        },
+        "data_description": {
+          "callback_url": "Paste the complete callback URL you received after logging in"
+        }
       },
-      "data_description": {
-        "callback_url": "Paste the complete callback URL you received after logging in"
-      }
-    },
-    "callback": {
+      "callback": {
         "title": "Panasonic Japan Authentication",
         "description": "**Step 1:** Click the login URL below to open the login page in your browser (if the page does not open, please delete the cookie for auth.digital.panasonic.com):\n\n**Login URL:**\n`{login_url}`\n\n**Step 2:** After logging in with your Panasonic account, you'll be redirected to a callback URL (if not redirected, open developer tools with F12 and copy the failing URL).\n\n**Step 3:** Copy the entire callback URL (it will look like `com.panasonic.jp.kitchenpocket.auth0://auth.digital.panasonic.com/android/com.panasonic.jp.kitchenpocket/callback?code=...&state=...`) and paste it in the field below.",
         "data": {
@@ -19,6 +19,21 @@
         },
         "data_description": {
           "callback_url": "Paste the complete callback URL you received after logging in"
+        }
+      },
+      "init": {
+        "title": "Cooling Assist Mode",
+        "description": "Select the default cooling assist mode.",
+        "data": {
+          "cooling_assist_mode": "Cooling Assist Mode"
+        }
+      },
+      "details": {
+        "title": "Cooling Assist Details",
+        "description": "Set the default time and seconds for the selected mode.",
+        "data": {
+          "cooling_assist_time": "Time (Minutes)",
+          "cooling_assist_second": "Seconds"
         }
       }
     },
@@ -29,6 +44,9 @@
       "no_access_token": "No access token received from authentication server",
       "invalid_token": "The access token is invalid or expired",
       "no_fridge_found": "No fridge device found in your account",
+      "invalid_time_range": "The time value is out of the valid range for this mode.",
+      "invalid_second_step": "The second value must be in 10-second increments (0-50).",
+      "quench_zero_not_allowed": "Time and seconds cannot both be zero for the Quench mode.",
       "unknown": "Unexpected error occurred"
     },
     "abort": {

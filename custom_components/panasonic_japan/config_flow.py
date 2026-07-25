@@ -461,16 +461,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class PanasonicJapanOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle multi-step options flow for Panasonic Japan integration."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize options flow."""
-        self.config_entry = config_entry
-
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Step 1: Select cooling assist mode."""
         if user_input is not None:
-            # 選択されたモードをコンテキストに保存し、次のステップへ遷移
             self.context["cooling_assist_mode"] = user_input["cooling_assist_mode"]
             return await self.async_step_details()
 
@@ -504,7 +499,6 @@ class PanasonicJapanOptionsFlowHandler(config_entries.OptionsFlow):
             time_val = user_input.get("cooling_assist_time", 0)
             sec_val = user_input.get("cooling_assist_second", 0)
 
-            # モードに応じたサーバーサイドの厳格なバリデーション
             if mode == "quench":
                 if not (0 <= time_val <= 10):
                     errors["cooling_assist_time"] = "invalid_time_range"
@@ -520,7 +514,6 @@ class PanasonicJapanOptionsFlowHandler(config_entries.OptionsFlow):
                     errors["cooling_assist_time"] = "invalid_time_range"
 
             if not errors:
-                # モードと入力値をまとめてオプションとして保存
                 complete_data = {
                     "cooling_assist_mode": mode,
                     "cooling_assist_time": time_val,
@@ -528,7 +521,6 @@ class PanasonicJapanOptionsFlowHandler(config_entries.OptionsFlow):
                 }
                 return self.async_create_entry(title="", data=complete_data)
 
-        # モードに応じたデフォルト値の決定
         default_time = 5
         default_sec = 0
         if mode == "cold":
@@ -539,7 +531,6 @@ class PanasonicJapanOptionsFlowHandler(config_entries.OptionsFlow):
         current_time = self.config_entry.options.get("cooling_assist_time", default_time)
         current_sec = self.config_entry.options.get("cooling_assist_second", default_sec)
 
-        # Offモードの場合は時間設定をスキップして直接保存
         if mode == "off":
             return self.async_create_entry(
                 title="",
