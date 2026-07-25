@@ -4,7 +4,7 @@ set_cooloven:
       - integration: panasonic_japan
   fields:
     mode:
-      required: false
+      required: true
       example: quench
       selector:
         select:
@@ -14,7 +14,7 @@ set_cooloven:
             - cold
             - frozen
     time:
-      required: false
+      required: true
       default: 5
       selector:
         number:
@@ -22,7 +22,7 @@ set_cooloven:
           max: 60
           step: 1
     second:
-      required: false
+      required: true
       default: 0
       selector:
         number:
