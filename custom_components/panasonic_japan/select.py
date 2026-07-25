@@ -140,11 +140,8 @@ class PanasonicSelect(CoordinatorEntity[PanasonicDataUpdateCoordinator], SelectE
         """Run when entity about to be added to hass."""
         await super().async_added_to_hass()
         if not self.entity_description.status_key and self.entity_description.key == "cooling_assist_mode":
-            if DOMAIN not in self.hass.data:
-                self.hass.data[DOMAIN] = {}
-            if self._entry_id not in self.hass.data[DOMAIN]:
-                self.hass.data[DOMAIN][self._entry_id] = {}
-            self.hass.data[DOMAIN][self._entry_id]["cooling_assist_mode"] = self._attr_current_option
+            custom_data = self.hass.data.setdefault(DOMAIN, {}).setdefault(f"{self._entry_id}_custom", {})
+            custom_data["cooling_assist_mode"] = self._attr_current_option
 
     @property
     def current_option(self) -> str | None:
@@ -168,15 +165,10 @@ class PanasonicSelect(CoordinatorEntity[PanasonicDataUpdateCoordinator], SelectE
             self._attr_current_option = option
             
             if self.entity_description.key == "cooling_assist_mode":
-                if DOMAIN not in self.hass.data:
-                    self.hass.data[DOMAIN] = {}
-                if self._entry_id not in self.hass.data[DOMAIN]:
-                    self.hass.data[DOMAIN][self._entry_id] = {}
-                self.hass.data[DOMAIN][self._entry_id]["cooling_assist_mode"] = option
+                custom_data = self.hass.data.setdefault(DOMAIN, {}).setdefault(f"{self._entry_id}_custom", {})
+                custom_data["cooling_assist_mode"] = option
 
-                entry_data = self.hass.data[DOMAIN][self._entry_id]
-                number_entities = entry_data.get("number_entities", {})
-
+                number_entities = custom_data.get("number_entities", {})
                 time_ent = number_entities.get("cooling_assist_time")
                 sec_ent = number_entities.get("cooling_assist_second")
 
