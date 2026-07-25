@@ -28,10 +28,12 @@ async def async_setup_entry(
 class CoolingAssistButton(CoordinatorEntity[PanasonicDataUpdateCoordinator], ButtonEntity):
     """Representation of the Cooling Assist trigger button."""
 
+    _attr_has_entity_name = True
+    _attr_translation_key = "cooling_assist"
+
     def __init__(self, coordinator: PanasonicDataUpdateCoordinator) -> None:
         """Initialize the button."""
         super().__init__(coordinator)
-        self._attr_name = "Cooling Assist"
         self._attr_unique_id = f"{coordinator.appliance_id}_cooling_assist"
         self._attr_icon = "mdi:snowflake"
         self._attr_device_info = DeviceInfo(

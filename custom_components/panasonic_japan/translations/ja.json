@@ -103,17 +103,6 @@
         }
       }
     },
-    "switch": {
-      "fast_ice_status": {
-        "name": "速氷"
-      },
-      "stop_ice_status": {
-        "name": "製氷停止"
-      },
-      "econavi_lamp_status": {
-        "name": "「エコナビ」ランプ表示"
-      }
-    },
     "number": {
       "cooling_assist_time": {
         "name": "クーリングアシスト 時間"
@@ -125,6 +114,17 @@
     "button": {
       "cooling_assist": {
         "name": "クーリングアシスト実行"
+      }
+    },
+    "switch": {
+      "fast_ice_status": {
+        "name": "速氷"
+      },
+      "stop_ice_status": {
+        "name": "製氷停止"
+      },
+      "econavi_lamp_status": {
+        "name": "「エコナビ」ランプ表示"
       }
     }
   },
