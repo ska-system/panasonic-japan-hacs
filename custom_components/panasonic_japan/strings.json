@@ -20,21 +20,6 @@
         "data_description": {
           "callback_url": "Paste the complete callback URL you received after logging in"
         }
-      },
-      "init": {
-        "title": "Cooling Assist Mode",
-        "description": "Select the default cooling assist mode.",
-        "data": {
-          "cooling_assist_mode": "Cooling Assist Mode"
-        }
-      },
-      "details": {
-        "title": "Cooling Assist Details",
-        "description": "Set the default time and seconds for the selected mode.",
-        "data": {
-          "cooling_assist_time": "Time (Minutes)",
-          "cooling_assist_second": "Seconds"
-        }
       }
     },
     "error": {
@@ -44,9 +29,6 @@
       "no_access_token": "No access token received from authentication server",
       "invalid_token": "The access token is invalid or expired",
       "no_fridge_found": "No fridge device found in your account",
-      "invalid_time_range": "The time value is out of the valid range for this mode.",
-      "invalid_second_step": "The second value must be in 10-second increments (0-50).",
-      "quench_zero_not_allowed": "Time and seconds cannot both be zero for the Quench mode.",
       "unknown": "Unexpected error occurred"
     },
     "abort": {

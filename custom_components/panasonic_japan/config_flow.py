@@ -23,8 +23,6 @@ from .const import (
     DOMAIN,
 )
 
-
-
 _LOGGER = logging.getLogger(__name__)
 
 REDIRECT_URI = "com.panasonic.jp.kitchenpocket.auth0://auth.digital.panasonic.com/android/com.panasonic.jp.kitchenpocket/callback"
@@ -46,7 +44,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Panasonic Japan."""
 
     VERSION = 1
-    
+
     def _generate_pkce(self) -> tuple[str, str, str, str]:
         """Generate PKCE parameters."""
         # Generate code verifier (43-128 characters, URL-safe)

@@ -20,21 +20,6 @@
         "data_description": {
           "callback_url": "ログイン後に取得したコールバック URL 全体を貼り付けてください"
         }
-      },
-      "init": {
-        "title": "冷却アシストモード",
-        "description": "デフォルトの冷却アシストモードを選択してください。",
-        "data": {
-          "cooling_assist_mode": "冷却アシストモード"
-        }
-      },
-      "details": {
-        "title": "冷却アシスト詳細設定",
-        "description": "選択したモードのデフォルトの時間と秒数を設定してください。",
-        "data": {
-          "cooling_assist_time": "時間 (分)",
-          "cooling_assist_second": "秒"
-        }
       }
     },
     "error": {
@@ -44,10 +29,7 @@
       "no_access_token": "認証サーバーからアクセストークンを取得できませんでした",
       "invalid_token": "アクセストークンが無効か、期限切れです",
       "no_fridge_found": "アカウント内に冷蔵庫デバイスが見つかりませんでした",
-      "unknown": "予期しないエラーが発生しました",
-      "invalid_time_range": "指定されたモードに対して時間の値が有効な範囲外です。",
-      "invalid_second_step": "秒の値は10秒刻み（0〜50）である必要があります。",
-      "quench_zero_not_allowed": "「冷ます」モードでは時間と秒数を両方0にすることはできません。"
+      "unknown": "予期しないエラーが発生しました"
       },
     "abort": {
       "already_configured": "このデバイスは既に設定済みです"
