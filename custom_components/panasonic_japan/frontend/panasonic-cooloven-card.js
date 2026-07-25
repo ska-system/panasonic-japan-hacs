@@ -31,12 +31,12 @@ class PanasonicCoolovenCard extends HTMLElement {
   async render() {
     const t = await this.loadTranslations();
     
-  this.innerHTML = `
+    this.innerHTML = `
       <ha-card header="${t.title || ''}">
         <div style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
-          <div>
-            <label id="lbl-mode" style="display: block; margin-bottom: 4px; font-weight: 500;">${t.mode || ''}</label>
-            <select id="mode-select" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--divider-color); background: var(--card-background-color); color: var(--primary-text-color);">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label id="lbl-mode" style="font-weight: 500; white-space: nowrap;">${t.mode || ''}</label>
+            <select id="mode-select" style="width: 160px; padding: 8px; border-radius: 4px; border: 1px solid var(--divider-color); background: var(--card-background-color); color: var(--primary-text-color);">
               <option value="off">${t.off || 'Off'}</option>
               <option value="quench">${t.quench || 'Quench'}</option>
               <option value="cold">${t.cold || 'Cold'}</option>
@@ -44,14 +44,14 @@ class PanasonicCoolovenCard extends HTMLElement {
             </select>
           </div>
           <div id="time-container" style="display: flex; justify-content: space-between; align-items: center;">
-            <label id="lbl-time" style="font-weight: 500;">${t.time || ''}</label>
-            <input type="number" id="time-input" style="width: 100px; padding: 8px; text-align: right; border-radius: 4px; border: 1px solid var(--divider-color); background: var(--card-background-color); color: var(--primary-text-color);">
+            <label id="lbl-time" style="font-weight: 500; white-space: nowrap;">${t.time || ''}</label>
+            <input type="number" id="time-input" style="width: 160px; padding: 8px; text-align: right; border-radius: 4px; border: 1px solid var(--divider-color); background: var(--card-background-color); color: var(--primary-text-color);">
           </div>
           <div id="sec-container" style="display: flex; justify-content: space-between; align-items: center;">
-            <label id="lbl-sec" style="font-weight: 500;">${t.second || ''}</label>
-            <input type="number" id="sec-input" style="width: 100px; padding: 8px; text-align: right; border-radius: 4px; border: 1px solid var(--divider-color); background: var(--card-background-color); color: var(--primary-text-color);">
+            <label id="lbl-sec" style="font-weight: 500; white-space: nowrap;">${t.second || ''}</label>
+            <input type="number" id="sec-input" style="width: 160px; padding: 8px; text-align: right; border-radius: 4px; border: 1px solid var(--divider-color); background: var(--card-background-color); color: var(--primary-text-color);">
           </div>
-          <mwc-button raised id="exec-btn" style="margin-top: 8px;">${t.exec || 'Execute'}</mwc-button>
+          <button id="exec-btn" style="width: 100%; padding: 10px; border-radius: 4px; border: none; background: var(--primary-color); color: var(--text-primary-color, #fff); font-weight: 500; cursor: pointer; margin-top: 8px;">${t.exec || 'Execute'}</button>
         </div>
       </ha-card>
     `;
@@ -74,14 +74,12 @@ class PanasonicCoolovenCard extends HTMLElement {
       if (isNaN(time)) time = 0;
       if (isNaN(second)) second = 0;
 
-      // モードごとの制限適用
       let minTime = 0, maxTime = 60;
       let maxSec = 50;
 
       if (mode === 'quench') {
         minTime = 0; maxTime = 10;
         maxSec = 50;
-        // 秒を10秒単位に切り捨て、上限クランプ
         second = Math.floor(second / 10) * 10;
         if (second < 0) second = 0;
         if (second > maxSec) second = maxSec;
@@ -91,11 +89,9 @@ class PanasonicCoolovenCard extends HTMLElement {
         minTime = 30; maxTime = 60;
       }
 
-      // 分の上下限クランプ
       if (time < minTime) time = minTime;
       if (time > maxTime) time = maxTime;
 
-      // 画面上の入力値も同期して書き換える
       timeInput.value = time;
       if (secContainer.style.display !== 'none') {
         secInput.value = second;
