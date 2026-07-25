@@ -9,7 +9,7 @@ set_cooloven:
       selector:
         select:
           options:
-            - off
+            - "off"
             - quench
             - cold
             - frozen
