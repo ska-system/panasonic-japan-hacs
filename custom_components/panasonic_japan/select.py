@@ -100,9 +100,9 @@ async def async_setup_entry(
     for description in SELECTS:
         if description.status_key:
             if description.status_key in device_status:
-                entities.append(PanasonicSelect(coordinator, description))
+                entities.append(PanasonicSelect(coordinator, description, entry.entry_id))
         else:
-            entities.append(PanasonicSelect(coordinator, description))
+            entities.append(PanasonicSelect(coordinator, description, entry.entry_id))
 
     async_add_entities(entities)
 
@@ -117,10 +117,12 @@ class PanasonicSelect(CoordinatorEntity[PanasonicDataUpdateCoordinator], SelectE
         self,
         coordinator: PanasonicDataUpdateCoordinator,
         description: PanasonicSelectDescription,
+        entry_id: str,
     ) -> None:
         """Initialize."""
         super().__init__(coordinator)
         self.entity_description = description
+        self._entry_id = entry_id
         self._attr_unique_id = f"{coordinator.appliance_id}_{description.key}"
         self._attr_options = description.options
         if description.entity_category:
@@ -133,6 +135,12 @@ class PanasonicSelect(CoordinatorEntity[PanasonicDataUpdateCoordinator], SelectE
         )
         if not description.status_key and description.options:
             self._attr_current_option = description.options[0]
+            if description.key == "cooling_assist_mode":
+                if DOMAIN not in self.hass.data:
+                    self.hass.data[DOMAIN] = {}
+                if self._entry_id not in self.hass.data[DOMAIN]:
+                    self.hass.data[DOMAIN][self._entry_id] = {}
+                self.hass.data[DOMAIN][self._entry_id]["cooling_assist_mode"] = description.options[0]
 
     @property
     def current_option(self) -> str | None:
@@ -154,4 +162,47 @@ class PanasonicSelect(CoordinatorEntity[PanasonicDataUpdateCoordinator], SelectE
             await self.coordinator.async_request_refresh()
         else:
             self._attr_current_option = option
+            
+            if self.entity_description.key == "cooling_assist_mode":
+                if DOMAIN not in self.hass.data:
+                    self.hass.data[DOMAIN] = {}
+                if self._entry_id not in self.hass.data[DOMAIN]:
+                    self.hass.data[DOMAIN][self._entry_id] = {}
+                self.hass.data[DOMAIN][self._entry_id]["cooling_assist_mode"] = option
+
+                entry_data = self.hass.data[DOMAIN][self._entry_id]
+                number_entities = entry_data.get("number_entities", {})
+
+                time_ent = number_entities.get("cooling_assist_time")
+                sec_ent = number_entities.get("cooling_assist_second")
+
+                if option == "off":
+                    if time_ent:
+                        time_ent._attr_native_value = 0.0
+                        time_ent.async_write_ha_state()
+                    if sec_ent:
+                        sec_ent._attr_native_value = 0.0
+                        sec_ent.async_write_ha_state()
+                elif option == "quench":
+                    if time_ent:
+                        time_ent._attr_native_value = 5.0
+                        time_ent.async_write_ha_state()
+                    if sec_ent:
+                        sec_ent._attr_native_value = 0.0
+                        sec_ent.async_write_ha_state()
+                elif option == "cold":
+                    if time_ent:
+                        time_ent._attr_native_value = 15.0
+                        time_ent.async_write_ha_state()
+                    if sec_ent:
+                        sec_ent._attr_native_value = 0.0
+                        sec_ent.async_write_ha_state()
+                elif option in ("frozen", "freeze"):
+                    if time_ent:
+                        time_ent._attr_native_value = 45.0
+                        time_ent.async_write_ha_state()
+                    if sec_ent:
+                        sec_ent._attr_native_value = 0.0
+                        sec_ent.async_write_ha_state()
+
             self.async_write_ha_state()
