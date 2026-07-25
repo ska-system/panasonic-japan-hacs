@@ -46,10 +46,16 @@ PUSH_KIND_DOOR           = "alert_door_open_info"    # Door left open for 5 minu
 PUSH_KIND_WATER_SHORTAGE = "alert_water_shortage"
 PUSH_KIND_ICE_COMPLETED  = "alert_ice_completed"
 PUSH_KIND_ERROR          = "alert_error_occured"     # Note: Panasonic typo
+PUSH_KIND_COOLOVEN_COMPLETED = "alert_cooloven_completed"
+PUSH_KIND_COOLOVEN_CANCELED  = "alert_cooloven_canceled"
+PUSH_KIND_COOLOVEN_CHANGED   = "alert_cooloven_changed"
 
 # HA event names
 EVENT_DOOR           = f"{DOMAIN}_door_event"
 EVENT_WATER_SHORTAGE = f"{DOMAIN}_water_shortage_event"
 EVENT_ICE_COMPLETED  = f"{DOMAIN}_ice_completed_event"
 EVENT_ERROR          = f"{DOMAIN}_error_event"
+EVENT_COOLOVEN_COMPLETED = f"{DOMAIN}_cooloven_completed_event"
+EVENT_COOLOVEN_CANCELED  = f"{DOMAIN}_cooloven_canceled_event"
+EVENT_COOLOVEN_CHANGED   = f"{DOMAIN}_cooloven_changed_event"
 EVENT_PUSH           = f"{DOMAIN}_push_event"

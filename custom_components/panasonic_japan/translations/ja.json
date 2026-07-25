@@ -1,0 +1,142 @@
+{
+  "config": {
+    "step": {
+      "reconfigure_callback": {
+        "title": "Panasonic Japan の再認証",
+        "description": "Panasonic アカウントを再認証してアクセストークンを更新します。\n\n**手順 1:** 以下のログイン URL をクリックして、ブラウザでログインページを開いてください:\n\n**ログイン URL:**\n`{login_url}`\n\n**手順 2:** ログイン後、リダイレクト先のコールバック URL 全体をコピーし、以下に貼り付けてください。",
+        "data": {
+          "callback_url": "コールバック URL"
+        },
+        "data_description": {
+          "callback_url": "ログイン後に取得したコールバック URL 全体を貼り付けてください"
+        }
+      },
+      "callback": {
+        "title": "Panasonic Japan 認証",
+        "description": "**手順 1:** 以下のログイン URL をクリックして、ブラウザでログインページを開いてください(ページが開かない場合は、auth.digital.panasonic.comのcookieを削除してください。):\n\n**ログイン URL:**\n`{login_url}`\n\n**手順 2:** Panasonic アカウントでログインすると、コールバック URL にリダイレクトされます。(リダイレクトされない場合は、F12で開発者ツールを開き、エラーになっているURLをコピーして下さい。)\n\n**手順 3:** コールバック URL 全体をコピーし（例: `com.panasonic.jp.kitchenpocket.auth0://...`）、以下のフィールドに貼り付けてください。",
+        "data": {
+          "callback_url": "コールバック URL"
+        },
+        "data_description": {
+          "callback_url": "ログイン後に取得したコールバック URL 全体を貼り付けてください"
+        }
+      }
+    },
+    "error": {
+      "callback_url_required": "コールバック URL を入力してください",
+      "invalid_callback_url": "コールバック URL の形式が正しくありません。確認してもう一度お試しください。",
+      "token_exchange_failed": "認証コードのトークン交換に失敗しました。コードの有効期限が切れている可能性があります。もう一度お試しください。",
+      "no_access_token": "認証サーバーからアクセストークンを取得できませんでした",
+      "invalid_token": "アクセストークンが無効か、期限切れです",
+      "no_fridge_found": "アカウント内に冷蔵庫デバイスが見つかりませんでした",
+      "unknown": "予期しないエラーが発生しました"
+      },
+    "abort": {
+      "already_configured": "このデバイスは既に設定済みです"
+    }
+  },
+  "entity": {
+    "select": {
+      "partial_mode": {
+        "name": "パーシャル/チルド切替",
+        "state": {
+          "strong": "パーシャル 強",
+          "medium": "パーシャル 中",
+          "weak": "パーシャル 弱",
+          "chilled": "チルド"
+        }
+      },
+      "cold_room_mode": {
+        "name": "冷蔵",
+        "state": {
+          "strong": "強",
+          "medium": "中",
+          "weak": "弱"
+        }
+      },
+      "freezing_room_mode": {
+        "name": "冷凍",
+        "state": {
+          "strong": "強",
+          "medium": "中",
+          "weak": "弱"
+        }
+      },
+      "cooloven_lamp_mode": {
+        "name": "「クーリングアシスト」ランプ表示",
+        "state": {
+          "off": "切",
+          "dark": "暗",
+          "bright": "明"
+        }
+      },
+      "door_alarms_mode": {
+        "name": "ドアアラーム音量",
+        "state": {
+          "medium": "中",
+          "big": "大"
+        }
+      },
+      "coldroom_light_mode": {
+        "name": "冷蔵室庫内照明",
+        "state": {
+          "off": "切",
+          "dark": "暗",
+          "bright": "明"
+        }
+      },
+      "pcroom_light_mode": {
+        "name": "パーシャル/チルド切替室照明",
+        "state": {
+          "off": "切",
+          "dark": "暗",
+          "bright": "明"
+        }
+      },
+      "cooling_assist_mode": {
+        "name": "クーリングアシスト モード",
+        "state": {
+          "off": "オフ",
+          "quench": "冷ます",
+          "cold": "急冷",
+          "frozen": "急凍"
+        }
+      }
+    },
+    "number": {
+      "cooling_assist_time": {
+        "name": "クーリングアシスト 時間"
+      },
+      "cooling_assist_second": {
+        "name": "クーリングアシスト 秒"
+      }
+    },
+    "button": {
+      "cooling_assist": {
+        "name": "クーリングアシスト実行"
+      }
+    },
+    "switch": {
+      "fast_ice_status": {
+        "name": "速氷"
+      },
+      "stop_ice_status": {
+        "name": "製氷停止"
+      },
+      "econavi_lamp_status": {
+        "name": "「エコナビ」ランプ表示"
+      }
+    }
+  },
+  "card": {
+    "title": "冷却アシスト制御",
+    "mode": "モード:",
+    "off": "切る",
+    "quench": "冷ます",
+    "cold": "急冷" ,
+    "frozen": "急凍",
+    "time": "時間 (分):",
+    "second": "秒:",
+    "exec": "実行する"
+  }
+}

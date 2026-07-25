@@ -24,3 +24,4 @@ ENV/
 env/
 push_credentials.json
 .claude
+.vscode/launch.json

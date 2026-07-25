@@ -27,6 +27,7 @@ async def async_setup_entry(
         PanasonicCostReductionSensor(coordinator),
         PanasonicOperationModeSensor(coordinator),
         PanasonicFirmwareSensor(coordinator),
+        PanasonicCoolovenStateSensor(coordinator),
     ]
 
     async_add_entities(sensors)
@@ -142,3 +143,16 @@ class PanasonicFirmwareSensor(PanasonicSensor):
             }
         )
         return attrs
+
+class PanasonicCoolovenStateSensor(PanasonicSensor):
+    """Representation of a Panasonic Cooloven State Sensor."""
+
+    _attr_name = "Cooloven State"
+    _attr_unique_id = "cooloven_state"
+    _attr_icon = "mdi:fire"
+
+    @property
+    def native_value(self) -> str:
+        """Return the state of the sensor."""
+        device_status = self.coordinator.data.get("device_status", {})
+        return device_status.get("cooloven_mode", "off")
