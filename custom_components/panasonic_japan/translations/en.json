@@ -112,7 +112,7 @@
     "off": "Off",
     "quench": "Quench (Rapid Cooling)",
     "cold": "Cold (Rapid Cooling)" ,
-    "freeze": "Freeze (Rapid Freezing)",    
+    "frozen": "Freeze (Rapid Freezing)",    
     "time": "Time (Minutes):",
     "second": "Seconds:",
     "exec": "Execute"

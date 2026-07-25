@@ -32,9 +32,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
     async def handle_set_cooloven(call: ServiceCall):
-        mode = call.data.get("mode")
-        time_min = call.data.get("time", 0)
-        time_sec = call.data.get("second", 0)
+        # オプションフローで保存された設定値をデフォルトとして取得
+        default_mode = entry.options.get("cooling_assist_mode", "quench")
+        default_time = entry.options.get("cooling_assist_time", 5)
+        default_sec = entry.options.get("cooling_assist_second", 0)
+
+        # 引数が指定されていない場合はオプションのデフォルト値を使用
+        mode = call.data.get("mode") or default_mode
+        time_min = call.data.get("time")
+        if time_min is None:
+            time_min = default_time
+        time_sec = call.data.get("second")
+        if time_sec is None:
+            time_sec = default_sec
 
         payload = {
             "cooloven_mode": mode,
@@ -52,6 +62,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.services.async_register(DOMAIN, "set_cooloven", handle_set_cooloven)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
     # Start push notification listener (non-blocking; failure is logged, not fatal)
     push_handler = PanasonicPushHandler(hass, coordinator.api, entry)
@@ -86,3 +97,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             await push_handler.async_stop()
 
     return unload_ok
+
+async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Handle options update."""
+    await hass.config_entries.async_reload(entry.entry_id)

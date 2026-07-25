@@ -14,6 +14,13 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_ACCESS_TOKEN
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers.selector import (
+    DurationSelector,
+    DurationSelectorConfig,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 
 from .api import PanasonicAPI
 from .const import (
@@ -22,6 +29,8 @@ from .const import (
     AUTH0_DOMAIN,
     DOMAIN,
 )
+
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -45,6 +54,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
+    # オプションフローを呼び出すためのメソッドを追加
+    @staticmethod
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> config_entries.OptionsFlow:
+        """Create the options flow."""
+        return PanasonicJapanOptionsFlowHandler(config_entry)
+    
     def _generate_pkce(self) -> tuple[str, str, str, str]:
         """Generate PKCE parameters."""
         # Generate code verifier (43-128 characters, URL-safe)
@@ -440,3 +457,108 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle import from configuration.yaml."""
         # For import, we still need to go through the flow
         return await self.async_step_user()
+
+class PanasonicJapanOptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle multi-step options flow for Panasonic Japan integration."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        """Initialize options flow."""
+        self.config_entry = config_entry
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Step 1: Select cooling assist mode."""
+        if user_input is not None:
+            # 選択されたモードをコンテキストに保存し、次のステップへ遷移
+            self.context["cooling_assist_mode"] = user_input["cooling_assist_mode"]
+            return await self.async_step_details()
+
+        current_mode = self.config_entry.options.get("cooling_assist_mode", "quench")
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        "cooling_assist_mode",
+                        default=current_mode,
+                    ): SelectSelector(
+                        SelectSelectorConfig(
+                            options=["off", "quench", "cold", "frozen"],
+                            mode=SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                }
+            ),
+        )
+
+    async def async_step_details(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Step 2: Set time and seconds based on the selected mode with dynamic defaults."""
+        errors = {}
+        mode = self.context.get("cooling_assist_mode")
+
+        if user_input is not None:
+            time_val = user_input.get("cooling_assist_time", 0)
+            sec_val = user_input.get("cooling_assist_second", 0)
+
+            # モードに応じたサーバーサイドの厳格なバリデーション
+            if mode == "quench":
+                if not (0 <= time_val <= 10):
+                    errors["cooling_assist_time"] = "invalid_time_range"
+                if not (0 <= sec_val <= 50) or sec_val % 10 != 0:
+                    errors["cooling_assist_second"] = "invalid_second_step"
+                if time_val == 0 and sec_val == 0:
+                    errors["base"] = "quench_zero_not_allowed"
+            elif mode == "cold":
+                if not (10 <= time_val <= 30):
+                    errors["cooling_assist_time"] = "invalid_time_range"
+            elif mode == "frozen":
+                if not (30 <= time_val <= 60):
+                    errors["cooling_assist_time"] = "invalid_time_range"
+
+            if not errors:
+                # モードと入力値をまとめてオプションとして保存
+                complete_data = {
+                    "cooling_assist_mode": mode,
+                    "cooling_assist_time": time_val,
+                    "cooling_assist_second": sec_val,
+                }
+                return self.async_create_entry(title="", data=complete_data)
+
+        # モードに応じたデフォルト値の決定
+        default_time = 5
+        default_sec = 0
+        if mode == "cold":
+            default_time = 15
+        elif mode == "frozen":
+            default_time = 45
+
+        current_time = self.config_entry.options.get("cooling_assist_time", default_time)
+        current_sec = self.config_entry.options.get("cooling_assist_second", default_sec)
+
+        # Offモードの場合は時間設定をスキップして直接保存
+        if mode == "off":
+            return self.async_create_entry(
+                title="",
+                data={"cooling_assist_mode": "off", "cooling_assist_time": 0, "cooling_assist_second": 0},
+            )
+
+        return self.async_show_form(
+            step_id="details",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        "cooling_assist_time",
+                        default=current_time,
+                    ): int,
+                    vol.Optional(
+                        "cooling_assist_second",
+                        default=current_sec,
+                    ): int,
+                }
+            ),
+            errors=errors,
+        )

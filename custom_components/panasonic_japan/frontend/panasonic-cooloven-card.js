@@ -40,7 +40,7 @@ class PanasonicCoolovenCard extends HTMLElement {
               <option value="off">${t.off || 'Off'}</option>
               <option value="quench">${t.quench || 'Quench'}</option>
               <option value="cold">${t.cold || 'Cold'}</option>
-              <option value="freeze">${t.freeze || 'Freeze'}</option>
+              <option value="frozen">${t.frozen || 'Frozen'}</option>
             </select>
           </div>
           <div id="time-container">
@@ -161,7 +161,7 @@ class PanasonicCoolovenCard extends HTMLElement {
       'off': t.off || 'Off',
       'quench': t.quench || 'Quench',
       'cold': t.cold || 'Cold',
-      'freeze': t.freeze || 'Freeze'
+      'frozen': t.frozen || 'Frozen'
     };
     for (const [val, text] of Object.entries(options)) {
       const opt = this.querySelector(`option[value="${val}"]`);
