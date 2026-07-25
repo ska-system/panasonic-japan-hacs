@@ -25,9 +25,9 @@ _LOGGER = logging.getLogger(__name__)
 @dataclass(frozen=True)
 class PanasonicNumberDescription(NumberEntityDescription):
     """Describe a Panasonic fridge number entity."""
-    native_min_value: float = 0.0
-    native_max_value: float = 59.0
-    native_step: float = 1.0
+    native_min_value: int = 0
+    native_max_value: int = 59
+    native_step: int = 1
     native_unit_of_measurement: str | None = None
     mode: NumberMode = NumberMode.AUTO
     entity_category: EntityCategory | None = None
@@ -38,9 +38,9 @@ NUMBERS: tuple[PanasonicNumberDescription, ...] = (
         key="cooling_assist_time",
         translation_key="cooling_assist_time",
         icon="mdi:timer-outline",
-        native_min_value=0.0,
-        native_max_value=60.0,
-        native_step=1.0,
+        native_min_value=0,
+        native_max_value=60,
+        native_step=1,
         native_unit_of_measurement=UnitOfTime.MINUTES,
         entity_category=EntityCategory.CONFIG,
         mode=NumberMode.BOX,
@@ -49,9 +49,9 @@ NUMBERS: tuple[PanasonicNumberDescription, ...] = (
         key="cooling_assist_second",
         translation_key="cooling_assist_second",
         icon="mdi:timer-sand",
-        native_min_value=0.0,
-        native_max_value=59.0,
-        native_step=10.0,
+        native_min_value=0,
+        native_max_value=59,
+        native_step=10,
         native_unit_of_measurement=UnitOfTime.SECONDS,
         entity_category=EntityCategory.CONFIG,
         mode=NumberMode.BOX,
@@ -102,7 +102,7 @@ class PanasonicNumber(CoordinatorEntity[PanasonicDataUpdateCoordinator], NumberE
             manufacturer="Panasonic",
             model=coordinator.product_code,
         )
-        self._attr_native_value = 0.0
+        self._attr_native_value = 0
 
     async def async_added_to_hass(self) -> None:
         """Run when entity about to be added to hass."""
@@ -123,16 +123,16 @@ class PanasonicNumber(CoordinatorEntity[PanasonicDataUpdateCoordinator], NumberE
         mode = self._get_current_mode()
         if self.entity_description.key == "cooling_assist_time":
             if mode == "off":
-                return 0.0
+                return 0
             elif mode == "quench":
-                return 0.0
+                return 0
             elif mode == "cold":
-                return 10.0
+                return 10
             elif mode in ("frozen", "freeze"):
-                return 30.0
+                return 30
         elif self.entity_description.key == "cooling_assist_second":
-            return 0.0
-        return 0.0
+            return 0
+        return 0
 
     @property
     def native_max_value(self) -> float:
@@ -140,26 +140,26 @@ class PanasonicNumber(CoordinatorEntity[PanasonicDataUpdateCoordinator], NumberE
         mode = self._get_current_mode()
         if self.entity_description.key == "cooling_assist_time":
             if mode == "off":
-                return 0.0
+                return 0
             elif mode == "quench":
-                return 10.0
+                return 10
             elif mode == "cold":
-                return 30.0
+                return 30
             elif mode in ("frozen", "freeze"):
-                return 60.0
+                return 60
         elif self.entity_description.key == "cooling_assist_second":
             if mode in ("cold", "frozen", "freeze", "off"):
-                return 0.0
+                return 0
             elif mode == "quench":
-                return 50.0
-        return 0.0
+                return 50
+        return 0
 
     @property
     def native_step(self) -> float:
         """Return step value."""
         if self.entity_description.key == "cooling_assist_second":
-            return 10.0
-        return 1.0
+            return 10
+        return 1
 
     @property
     def native_value(self) -> float | None:
@@ -176,7 +176,7 @@ class PanasonicNumber(CoordinatorEntity[PanasonicDataUpdateCoordinator], NumberE
             value = max_v
         
         if self.entity_description.key == "cooling_assist_second":
-            value = (round(value / 10.0)) * 10.0
+            value = (round(value / 10)) * 10
 
         self._attr_native_value = value
         self.async_write_ha_state()
