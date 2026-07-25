@@ -34,5 +34,31 @@
     "abort": {
       "already_configured": "This device is already configured"
     }
+  },
+  "entity": {
+    "select": {
+      "cooling_assist_mode": {
+        "name": "Cooling Assist Mode",
+        "state": {
+          "off": "Off",
+          "quench": "Quench",
+          "cold": "Cold",
+          "frozen": "Frozen"
+        }
+      }
+    },
+    "number": {
+      "cooling_assist_time": {
+        "name": "Cooling Assist Time"
+      },
+      "cooling_assist_second": {
+        "name": "Cooling Assist Second"
+      }
+    },
+    "button": {
+      "cooling_assist": {
+        "name": "Cooling Assist"
+      }
+    }
   }
 }

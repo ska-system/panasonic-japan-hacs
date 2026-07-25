@@ -92,6 +92,15 @@
           "dark": "暗",
           "bright": "明"
         }
+      },
+      "cooling_assist_mode": {
+        "name": "クーリングアシスト モード",
+        "state": {
+          "off": "オフ",
+          "quench": "急冷却",
+          "cold": "冷え冷却",
+          "frozen": "冷凍"
+        }
       }
     },
     "switch": {
@@ -103,6 +112,19 @@
       },
       "econavi_lamp_status": {
         "name": "「エコナビ」ランプ表示"
+      }
+    },
+    "number": {
+      "cooling_assist_time": {
+        "name": "クーリングアシスト 時間"
+      },
+      "cooling_assist_second": {
+        "name": "クーリングアシスト 秒"
+      }
+    },
+    "button": {
+      "cooling_assist": {
+        "name": "クーリングアシスト実行"
       }
     }
   },
