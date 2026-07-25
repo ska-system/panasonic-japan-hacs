@@ -109,11 +109,11 @@ class CoolingAssistButton(CoordinatorEntity[PanasonicDataUpdateCoordinator], But
             raise HomeAssistantError("Time and seconds cannot both be 0 in quench mode.")
 
         service_data = {
-            "cooloven_mode": mode,
+            "mode": mode,
         }
         if mode != "off":
-            service_data["cooloven_time"] = time_int
-            service_data["cooloven_second"] = sec_int
+            service_data["time"] = time_int
+            service_data["second"] = sec_int
 
         await self.hass.services.async_call(
             DOMAIN,
