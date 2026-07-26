@@ -72,6 +72,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ),
     ])
 
+    await _async_register_lovelace_resource(hass)
+
     return True
 
 
@@ -87,3 +89,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             await push_handler.async_stop()
 
     return unload_ok
+
+async def _async_register_lovelace_resource(hass):
+    url = "/panasonic_japan_assets/panasonic-cooloven-card.js"
+    if "lovelace" in hass.data:
+        resources = hass.data["lovelace"].resources
+        if not resources.loaded:
+            await resources.async_load()
+        exists = any(item.get("url") == url for item in resources.async_items())
+        if not exists:
+            await resources.async_create_item({"res_type": "module", "url": url})
