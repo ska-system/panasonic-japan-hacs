@@ -123,8 +123,8 @@ class PanasonicCoolovenCard extends HTMLElement {
       timeContainer.style.display = 'none';
       secContainer.style.display = 'none';
     } else if (mode === 'quench') {
-      timeContainer.style.display = 'block';
-      secContainer.style.display = 'block';
+      timeContainer.style.display = 'flex';
+      secContainer.style.display = 'flex';
       timeInput.min = 0;
       timeInput.max = 10;
       timeInput.value = 5;
@@ -133,13 +133,13 @@ class PanasonicCoolovenCard extends HTMLElement {
       secInput.step = 10;
       secInput.value = 0;
     } else if (mode === 'cold') {
-      timeContainer.style.display = 'block';
+      timeContainer.style.display = 'flex';
       secContainer.style.display = 'none';
       timeInput.min = 10;
       timeInput.max = 30;
       timeInput.value = 15;
     } else if (mode === 'freeze' || mode === 'frozen') {
-      timeContainer.style.display = 'block';
+      timeContainer.style.display = 'flex';
       secContainer.style.display = 'none';
       timeInput.min = 30;
       timeInput.max = 60;
@@ -171,7 +171,7 @@ class PanasonicCoolovenCard extends HTMLElement {
     const execBtn = this.querySelector('#exec-btn');
     if (execBtn) execBtn.textContent = t.exec || "";
   }
-
+  
   setConfig(config) {}
   getCardSize() { return 3; }
 }
