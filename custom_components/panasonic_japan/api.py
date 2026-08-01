@@ -68,6 +68,8 @@ class PanasonicAPI:
         headers = {
             "Content-Type": "application/json; charset=UTF-8",
             "Accept": "application/json",
+            "X-API-Key": API_KEY,
+            "User-Agent": "KitchenPocketA/5.4.1",
         }
 
         if include_reizo_date:
@@ -219,10 +221,6 @@ class PanasonicAPI:
         if not self._refresh_token:
             raise PanasonicAPIError("No refresh token available")
 
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "User-Agent": "KitchenPocketA/5.4.1",
-        }
         data = {
             "grant_type": "refresh_token",
             "client_id": AUTH0_CLIENT_ID,
@@ -230,9 +228,7 @@ class PanasonicAPI:
         }
 
         try:
-            response = self._session.post(
-                AUTH0_TOKEN_URL, data=data, headers=headers, timeout=30
-            )
+            response = self._session.post(AUTH0_TOKEN_URL, data=data, timeout=30)
             response.raise_for_status()
             token_data = response.json()
 
