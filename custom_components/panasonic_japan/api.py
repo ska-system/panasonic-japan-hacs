@@ -68,6 +68,8 @@ class PanasonicAPI:
         headers = {
             "Content-Type": "application/json; charset=UTF-8",
             "Accept": "application/json",
+            "X-API-Key": API_KEY,
+            "User-Agent": "KitchenPocketA/5.4.1",
         }
 
         if include_reizo_date:
