@@ -57,11 +57,10 @@ NUMBERS: tuple[PanasonicNumberDescription, ...] = (
         entity_category=EntityCategory.CONFIG,
         mode=NumberMode.BOX,
     ),
-    # 追加: ドアモニター設定時間 (1〜72時間)
     PanasonicNumberDescription(
         key="notify_door_open_time",
         translation_key="notify_door_open_time",
-        icon="mdi:timer",
+        icon="mdi:timer-alert",
         native_min_value=1,
         native_max_value=72,
         native_step=1,
@@ -190,25 +189,32 @@ class PanasonicNumber(CoordinatorEntity[PanasonicDataUpdateCoordinator], NumberE
         return self._attr_native_value
 
     async def async_set_native_value(self, value: float) -> None:
-        """Update the current value locally with clamping/step adjustment."""
+        """Update the current value locally."""
         min_v = self.native_min_value
         max_v = self.native_max_value
-        if value < min_v:
-            value = min_v
-        if value > max_v:
-            value = max_v
+        
+        # 値のクランプ処理
+        value = max(min_v, min(int(value), max_v))
         
         if self.entity_description.key == "cooling_assist_second":
             value = (round(value / 10)) * 10
 
-        # ドアモニター設定時間の場合は、スイッチをONにしてから時間を反映させる
-        if self.entity_description.key == "notify_door_open_time":
+        # ドアモニター設定時間の場合は、スイッチの状態を確認してAPIへ反映
+        if self.entity_description.key == "door_open_time":
             current_settings = dict(self.coordinator.data.get("notification_settings", {}))
             if "param_list" in current_settings:
                 for item in current_settings["param_list"]:
                     if item.get("param_name") == "doorOpenInfo":
-                        item["param_value"] = True
-                        item["param_time"] = int(value)
+                        # 現在のスイッチ状態を取得
+                        is_on = item.get("param_value", False)
+                        
+                        # ONの時のみ param_time を設定し、OFFの時は設定しない
+                        if is_on:
+                            item["param_time"] = int(value)
+                        else:
+                            # OFFの場合は param_time を削除する（キー自体を除外）
+                            if "param_time" in item:
+                                del item["param_time"]
                         break
             
             await self.hass.async_add_executor_job(

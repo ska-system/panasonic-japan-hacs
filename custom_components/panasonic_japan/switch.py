@@ -175,20 +175,26 @@ class PanasonicSwitch(CoordinatorEntity[PanasonicDataUpdateCoordinator], SwitchE
 
     async def _control(self, payload: dict[str, Any]) -> None:
         if self.entity_description.data_source == "notification_settings":
-            # 1. 現在の全通知設定を取得 (取得済みのJSON構造)
             current_settings = dict(self.coordinator.data.get("notification_settings", {}))
             
-            # 2. payload から今回の変更値を取得 (例: {"waterShortage": True} -> True)
             target_key = self.entity_description.status_key
             target_value = payload.get(target_key)
 
-            # 3. param_list 内の値を更新
             if "param_list" in current_settings:
                 for item in current_settings["param_list"]:
                     if item.get("param_name") == target_key:
                         item["param_value"] = target_value
+                        
+                        if target_key == "doorOpenInfo":
+                            if target_value is True:
+                                if "param_time" not in item or not item["param_time"]:
+                                    item["param_time"] = 1
+                            else:
+                                # OFF時は param_time を削除する
+                                if "param_time" in item:
+                                    del item["param_time"]
                         break
-            # 4. APIへ送信
+            
             await self.hass.async_add_executor_job(
                 self.coordinator.api.update_notification_settings,
                 self.coordinator.appliance_id,
