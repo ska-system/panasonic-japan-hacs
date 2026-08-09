@@ -169,6 +169,34 @@ class PanasonicAPI:
         response.raise_for_status()
         return response.json()
 
+    def get_notification_settings(self, appliance_id: str, term_id: str) -> dict[str, Any]:
+        """GET /devices/{id}/settings — get current notification settings."""
+        appliance_id_encoded = self._url_encode_appliance_id(appliance_id)
+        url = f"{API_BASE_URL}/devices/{appliance_id_encoded}/settings"
+
+        response = self._make_request(
+            "GET", url, headers=self._get_headers(), params={"term_id": term_id}, timeout=30
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def update_notification_settings(self, appliance_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """PUT /devices/{id}/settings — update notification settings."""
+        appliance_id_encoded = self._url_encode_appliance_id(appliance_id)
+        url = f"{API_BASE_URL}/devices/{appliance_id_encoded}/settings"
+
+        response = self._make_request(
+            "PUT", url, headers=self._get_headers(), json=payload, timeout=30
+        )
+        response.raise_for_status()
+        if not response.content:
+            return None
+        
+        try:
+            return response.json()
+        except Exception:
+            return None
+    
     def register_push_term(
         self, term_id: str, fcm_token: str, firebase_install_id: str
     ) -> dict[str, Any] | None:
@@ -267,3 +295,4 @@ class PanasonicAPI:
     def refresh_token(self) -> str | None:
         """Get current refresh token."""
         return self._refresh_token
+

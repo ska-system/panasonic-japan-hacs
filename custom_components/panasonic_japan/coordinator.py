@@ -88,16 +88,16 @@ class PanasonicDataUpdateCoordinator(DataUpdateCoordinator):
                 self.api.get_electricity_reduction, self.appliance_id
             ),
             self.hass.async_add_executor_job(
-                self.api.get_notification_settings, self.appliance_id
+                self.api.get_notification_settings, self.appliance_id, self.config_entry.data.get("push_term_id", "")
             ),
         )
         device_status.update(device_settings)
         return {
             "device_status": device_status,
+            "notification_settings": notification_settings,  # 正しく変数を渡す
             "electricity": electricity_data,
             "appliance_id": self.appliance_id,
             "product_code": self.product_code,
-            "notification_settings": self.notification_settings,
         }
 
     async def _async_update_data(self) -> dict:
