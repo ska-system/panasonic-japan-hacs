@@ -109,6 +109,9 @@
       },
       "cooling_assist_second": {
         "name": "Cooling Assist Second"
+      },
+      "notify_door_open_time": {
+        "name": "Notification: Door Monitor Time"
       }
     },
     "button": {
@@ -127,19 +130,19 @@
         "name": "Econavi Lamp"
       },
       "notify_water_shortage": {
-        "name": "Water Shortage Notification"
+        "name": "Notification: Water Shortage"
       },
       "notify_cool_oven": {
-        "name": "Cooling Assist Notification"
+        "name": "Notification: Cooling Assist"
       },
       "notify_ice_completed": {
-        "name": "Ice Making Complete Notification"
+        "name": "Notification: Ice Making Complete"
       },
       "notify_error_occurred": {
-        "name": "Error Notification"
+        "name": "Notification: Error Occurred"
       },
       "notify_door_open": {
-        "name": "Door Open Notification"
+        "name": "Notification: Door Open"
       }
     }
   },
