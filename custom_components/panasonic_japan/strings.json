@@ -125,6 +125,21 @@
       },
       "econavi_lamp_status": {
         "name": "Econavi Lamp"
+      },
+      "notify_water_shortage": {
+        "name": "Water Shortage Notification"
+      },
+      "notify_cool_oven": {
+        "name": "Cooling Assist Notification"
+      },
+      "notify_ice_completed": {
+        "name": "Ice Making Complete Notification"
+      },
+      "notify_error_occurred": {
+        "name": "Error Notification"
+      },
+      "notify_door_open": {
+        "name": "Door Open Notification"
       }
     }
   },

@@ -125,6 +125,21 @@
       },
       "econavi_lamp_status": {
         "name": "「エコナビ」ランプ表示"
+      },
+      "notify_water_shortage": {
+        "name": "通知設定：給水不足"
+      },
+      "notify_cool_oven": {
+        "name": "通知設定：クーリングアシスト"
+      },
+      "notify_ice_completed": {
+        "name": "通知設定：製氷完了"
+      },
+      "notify_error_occurred": {
+        "name": "通知設定：エラー発生"
+      },
+      "notify_door_open": {
+        "name": "通知設定：ドアモニター"
       }
     }
   },
