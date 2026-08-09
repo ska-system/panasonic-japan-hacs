@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers.entity import EntityCategory
 
 from .const import DOMAIN
 from .coordinator import PanasonicDataUpdateCoordinator
@@ -22,6 +23,7 @@ _LOGGER = logging.getLogger(__name__)
 class PanasonicSwitchDescription(SwitchEntityDescription):
     """Describe a Panasonic fridge switch."""
     status_key: str = ""
+    data_source: str = "device_status"
 
 
 SWITCHES: tuple[PanasonicSwitchDescription, ...] = (
@@ -49,6 +51,46 @@ SWITCHES: tuple[PanasonicSwitchDescription, ...] = (
         icon="mdi:lightbulb",
         status_key="econavi_lamp_status",
     ),
+    PanasonicSwitchDescription(
+        key="notify_water_shortage",
+        translation_key="notify_water_shortage",
+        icon="mdi:water-alert",
+        status_key="waterShortage",
+        entity_category=EntityCategory.CONFIG,
+        data_source="notification_settings",
+    ),
+    PanasonicSwitchDescription(
+        key="notify_cool_oven",
+        translation_key="notify_cool_oven",
+        icon="mdi:snowflake-alert",
+        status_key="coolOven",
+        entity_category=EntityCategory.CONFIG,
+        data_source="notification_settings",
+    ),
+    PanasonicSwitchDescription(
+        key="notify_ice_completed",
+        translation_key="notify_ice_completed",
+        icon="mdi:fridge-alert",
+        status_key="iceCompleted",
+        entity_category=EntityCategory.CONFIG,
+        data_source="notification_settings",
+    ),
+    PanasonicSwitchDescription(
+        key="notify_error_occurred",
+        translation_key="notify_error_occurred",
+        icon="mdi:alert-circle",
+        status_key="errorOccured",
+        entity_category=EntityCategory.CONFIG,
+        data_source="notification_settings",
+    ),
+    PanasonicSwitchDescription(
+        key="notify_door_open",
+        translation_key="notify_door_open",
+        icon="mdi:door-open",
+        status_key="doorOpenInfo",
+        entity_category=EntityCategory.CONFIG,
+        data_source="notification_settings",
+    ),
 )
 
 
@@ -62,13 +104,19 @@ async def async_setup_entry(
 
     # Only add switches whose status key is present in coordinator data
     device_status = coordinator.data.get("device_status", {})
-    entities = [
-        PanasonicSwitch(coordinator, description)
-        for description in SWITCHES
-        if description.status_key in device_status
-    ]
-    async_add_entities(entities)
+    notification_settings = coordinator.data.get("notification_settings", {})
 
+    entities = []
+    for description in SWITCHES:
+        source_data = (
+            notification_settings
+            if description.data_source == "notification_settings"
+            else device_status
+        )
+        if description.status_key in source_data:
+            entities.append(PanasonicSwitch(coordinator, description))
+
+    async_add_entities(entities)
 
 class PanasonicSwitch(CoordinatorEntity[PanasonicDataUpdateCoordinator], SwitchEntity):
     """A controllable boolean switch on the Panasonic fridge."""
@@ -95,7 +143,8 @@ class PanasonicSwitch(CoordinatorEntity[PanasonicDataUpdateCoordinator], SwitchE
     @property
     def is_on(self) -> bool | None:
         """Return current state."""
-        return self.coordinator.data.get("device_status", {}).get(
+        source = self.entity_description.data_source
+        return self.coordinator.data.get(source, {}).get(
             self.entity_description.status_key
         )
 
@@ -108,9 +157,30 @@ class PanasonicSwitch(CoordinatorEntity[PanasonicDataUpdateCoordinator], SwitchE
         await self._control({self.entity_description.status_key: False})
 
     async def _control(self, payload: dict[str, Any]) -> None:
-        await self.hass.async_add_executor_job(
-            self.coordinator.api.control_device,
-            self.coordinator.appliance_id,
-            payload,
-        )
+        if self.entity_description.data_source == "notification_settings":
+            # 1. 現在の全通知設定を取得 (取得済みのJSON構造)
+            current_settings = dict(self.coordinator.data.get("notification_settings", {}))
+            
+            # 2. payload から今回の変更値を取得 (例: {"waterShortage": True} -> True)
+            target_key = self.entity_description.status_key
+            target_value = payload.get(target_key)
+
+            # 3. param_list 内の値を更新
+            if "param_list" in current_settings:
+                for item in current_settings["param_list"]:
+                    if item.get("param_name") == target_key:
+                        item["param_value"] = target_value
+                        break
+            # 4. APIへ送信
+            await self.hass.async_add_executor_job(
+                self.coordinator.api.update_notification_settings,
+                self.coordinator.appliance_id,
+                current_settings,
+            )
+        else:
+            await self.hass.async_add_executor_job(
+                self.coordinator.api.control_device,
+                self.coordinator.appliance_id,
+                payload,
+            )
         await self.coordinator.async_request_refresh()

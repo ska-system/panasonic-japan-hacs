@@ -109,13 +109,65 @@ def link_push_to_device(access_token: str, appliance_id: str, term_id: str) -> d
         "Accept": "application/json",
         "Authorization": f"Bearer {access_token}",
         "X-Reizo-Date": _reizo_date(),
+        "User-Agent": "KitchenPocketA/5.4.1",
     }
     log.info("Linking push term to device via GET /devices/.../settings ...")
     resp = requests.get(url, params={"term_id": term_id}, headers=headers, timeout=30)
     log.info("  → %s %s", resp.status_code, resp.text[:400])
     resp.raise_for_status()
+
+    print("--- ALL API DATA DUMP ---")
+    print(json.dumps(resp.json(), indent=2, ensure_ascii=False))
+    print("-------------------------")
+
     return resp.json()
 
+def update_cool_oven_setting(access_token: str, appliance_id: str, term_id: str, cool_oven_value: bool) -> dict:
+    """[推測] PUTメソッド等を用いた設定更新のサンプル関数"""
+    encoded_id = _encode(appliance_id)
+    # encoded_id = urllib.parse.quote(encoded_id, safe='')  # URLエンコードして安全な文字列に変換
+    
+    url = f"{REIZO_API_BASE_URL}/devices/{encoded_id}/settings"
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json;charset=UTF-8",
+        "Authorization": f"Bearer {access_token}",
+        "X-Reizo-Date": _reizo_date(),
+        "User-Agent": "KitchenPocketA/5.4.1",
+    }
+    # サーバ側の仕様によっては、全パラメータまたは差分データの指定方法が異なる場合があります
+    payload = {
+        "term_id": term_id,
+        "param_list": [
+            {
+                "param_name": "waterShortage",
+                "param_value": False
+            },
+            {
+                "param_name": "coolOven",
+                "param_value": False 
+            },
+            {
+                "param_name": "iceCompleted",
+                "param_value": False
+            },                                    
+            {
+                "param_name": "errorOccured",
+                "param_value": False
+            },
+            {
+                "param_name": "doorOpenInfo",
+                "param_value": False
+            },            
+        ]
+    }
+    log.info("Updating device settings via PUT /devices/.../settings ...")
+    resp = requests.put(url, json=payload, headers=headers, timeout=30)
+    log.info("  → %s %s", resp.status_code, resp.text[:400])
+    resp.raise_for_status()
+    if resp.text and resp.text.strip():
+        return resp.json()
+    return {}
 
 def get_appliance_id(access_token: str) -> str | None:
     """Fetch appliance_id from user info."""
@@ -265,6 +317,8 @@ async def main(access_token: str, appliance_id: str | None = None) -> None:
         )
     else:
         log.warning("Could not find appliance_id — skipping device link step")
+
+    update_cool_oven_setting(access_token, appliance_id, term_id, False)
 
     log.info("Starting FCM listener … (open/close your fridge door, then check here)")
     await client.start()

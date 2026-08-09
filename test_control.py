@@ -39,8 +39,9 @@ def _headers(token: str) -> dict:
         "Accept": "application/json",
         "Authorization": f"Bearer {token}",
         "X-Reizo-Date": _reizo_date(),
+        "X-API-Key": API_KEY,
+        "User-Agent": "KitchenPocketA/5.4.1",
     }
-
 
 def _encode(appliance_id: str) -> str:
     """Convert appliance_id to base64url path segment (matches Android z() method)."""
@@ -135,6 +136,19 @@ def control(token: str, appliance_id: str, payload: dict) -> dict:
     resp.raise_for_status()
     return resp.json()
 
+def aieconaviControl(token: str, appliance_id: str, payload: dict) -> dict:
+    """PUT /devices/{id}/aieconavi/control with control payload."""
+    print(f"\n  → Sending: {json.dumps(payload)}")
+    resp = requests.put(
+        f"{REIZO_API_BASE_URL}/devices/{_encode(appliance_id)}/aieconavi/control",
+        headers=_headers(token),
+        json=payload,
+        timeout=30,
+    )
+    print(f"  ← {resp.status_code}")
+    print(f"  PUT response: {json.dumps(resp.json(), indent=2, ensure_ascii=False)}")
+    resp.raise_for_status()
+    return resp.json()
 
 def probe_endpoints(token: str, appliance_id: str) -> None:
     """Try all usages values to find which one returns control fields."""
@@ -294,6 +308,8 @@ def main() -> None:
     get_device_token(token, appliance_id)
 
     get_firmwareVersion(token, appliance_id)
+
+    # aieconaviControl(token, appliance_id,{"aieconavi_id": "houseSitting","aieconavi_control":"start"})
 
     print("\nFetching current status …")
     status = get_status(token, appliance_id)
