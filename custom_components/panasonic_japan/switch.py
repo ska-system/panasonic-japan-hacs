@@ -147,6 +147,18 @@ class PanasonicSwitch(CoordinatorEntity[PanasonicDataUpdateCoordinator], SwitchE
         return self.coordinator.data.get(source, {}).get(
             self.entity_description.status_key
         )
+    @property
+    def is_on(self) -> bool | None:
+        """Return current state."""
+        if self.entity_description.data_source == "notification_settings":
+            param_list = self.coordinator.data.get("notification_settings", {}).get("param_list", [])
+            for item in param_list:
+                if item.get("param_name") == self.entity_description.status_key:
+                    return item.get("param_value")
+            return False # 見つからない場合
+
+        # 通常のデバイスステータスの場合
+        return self.coordinator.data.get("device_status", {}).get(self.entity_description.status_key)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on."""
