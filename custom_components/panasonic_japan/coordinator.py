@@ -77,7 +77,7 @@ class PanasonicDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def _fetch_all(self) -> dict:
         """Fetch all device data from the API."""
-        device_status, device_settings, electricity_data = await asyncio.gather(
+        device_status, device_settings, electricity_data, notification_settings = await asyncio.gather(
             self.hass.async_add_executor_job(
                 self.api.get_device_status, self.appliance_id
             ),
@@ -87,6 +87,9 @@ class PanasonicDataUpdateCoordinator(DataUpdateCoordinator):
             self.hass.async_add_executor_job(
                 self.api.get_electricity_reduction, self.appliance_id
             ),
+            self.hass.async_add_executor_job(
+                self.api.get_notification_settings, self.appliance_id
+            ),
         )
         device_status.update(device_settings)
         return {
@@ -94,6 +97,7 @@ class PanasonicDataUpdateCoordinator(DataUpdateCoordinator):
             "electricity": electricity_data,
             "appliance_id": self.appliance_id,
             "product_code": self.product_code,
+            "notification_settings": self.notification_settings,
         }
 
     async def _async_update_data(self) -> dict:
