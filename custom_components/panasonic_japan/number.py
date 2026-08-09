@@ -205,16 +205,9 @@ class PanasonicNumber(CoordinatorEntity[PanasonicDataUpdateCoordinator], NumberE
             if "param_list" in current_settings:
                 for item in current_settings["param_list"]:
                     if item.get("param_name") == "doorOpenInfo":
-                        # 現在のスイッチ状態を取得
-                        is_on = item.get("param_value", False)
-                        
-                        # ONの時のみ param_time を設定し、OFFの時は設定しない
-                        if is_on:
-                            item["param_time"] = int(value)
-                        else:
-                            # OFFの場合は param_time を削除する（キー自体を除外）
-                            if "param_time" in item:
-                                del item["param_time"]
+                        # 時間を設定する際は確実に有効（ON）にする
+                        item["param_value"] = True
+                        item["param_time"] = int(value)
                         break
             
             await self.hass.async_add_executor_job(
