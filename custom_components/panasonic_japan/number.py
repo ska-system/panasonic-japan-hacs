@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from typing import Any
 
 from homeassistant.components.number import (
     NumberEntity,
@@ -53,6 +54,18 @@ NUMBERS: tuple[PanasonicNumberDescription, ...] = (
         native_max_value=59,
         native_step=10,
         native_unit_of_measurement=UnitOfTime.SECONDS,
+        entity_category=EntityCategory.CONFIG,
+        mode=NumberMode.BOX,
+    ),
+    # 追加: ドアモニター設定時間 (1〜72時間)
+    PanasonicNumberDescription(
+        key="notify_door_open_time",
+        translation_key="notify_door_open_time",
+        icon="mdi:timer",
+        native_min_value=1,
+        native_max_value=72,
+        native_step=1,
+        native_unit_of_measurement=UnitOfTime.HOURS,
         entity_category=EntityCategory.CONFIG,
         mode=NumberMode.BOX,
     ),
@@ -120,6 +133,8 @@ class PanasonicNumber(CoordinatorEntity[PanasonicDataUpdateCoordinator], NumberE
     @property
     def native_min_value(self) -> float:
         """Return dynamic minimum value based on mode."""
+        if self.entity_description.key == "notify_door_open_time":
+            return 1
         mode = self._get_current_mode()
         if self.entity_description.key == "cooling_assist_time":
             if mode == "off":
@@ -137,6 +152,8 @@ class PanasonicNumber(CoordinatorEntity[PanasonicDataUpdateCoordinator], NumberE
     @property
     def native_max_value(self) -> float:
         """Return dynamic maximum value based on mode."""
+        if self.entity_description.key == "notify_door_open_time":
+            return 72
         mode = self._get_current_mode()
         if self.entity_description.key == "cooling_assist_time":
             if mode == "off":
@@ -164,6 +181,12 @@ class PanasonicNumber(CoordinatorEntity[PanasonicDataUpdateCoordinator], NumberE
     @property
     def native_value(self) -> float | None:
         """Return current value."""
+        if self.entity_description.key == "notify_door_open_time":
+            param_list = self.coordinator.data.get("notification_settings", {}).get("param_list", [])
+            for item in param_list:
+                if item.get("param_name") == "doorOpenInfo":
+                    return item.get("param_time", 1)
+            return 1
         return self._attr_native_value
 
     async def async_set_native_value(self, value: float) -> None:
@@ -177,6 +200,24 @@ class PanasonicNumber(CoordinatorEntity[PanasonicDataUpdateCoordinator], NumberE
         
         if self.entity_description.key == "cooling_assist_second":
             value = (round(value / 10)) * 10
+
+        # ドアモニター設定時間の場合は、スイッチをONにしてから時間を反映させる
+        if self.entity_description.key == "notify_door_open_time":
+            current_settings = dict(self.coordinator.data.get("notification_settings", {}))
+            if "param_list" in current_settings:
+                for item in current_settings["param_list"]:
+                    if item.get("param_name") == "doorOpenInfo":
+                        item["param_value"] = True
+                        item["param_time"] = int(value)
+                        break
+            
+            await self.hass.async_add_executor_job(
+                self.coordinator.api.update_notification_settings,
+                self.coordinator.appliance_id,
+                current_settings,
+            )
+            await self.coordinator.async_request_refresh()
+            return
 
         self._attr_native_value = value
         self.async_write_ha_state()

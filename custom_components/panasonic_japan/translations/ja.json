@@ -109,6 +109,9 @@
       },
       "cooling_assist_second": {
         "name": "クーリングアシスト 秒"
+      },
+      "notify_door_open_time": {
+        "name": "通知設定：ドアモニター時間"
       }
     },
     "button": {
