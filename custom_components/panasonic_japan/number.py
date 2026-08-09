@@ -200,7 +200,7 @@ class PanasonicNumber(CoordinatorEntity[PanasonicDataUpdateCoordinator], NumberE
             value = (round(value / 10)) * 10
 
         # ドアモニター設定時間の場合は、スイッチの状態を確認してAPIへ反映
-        if self.entity_description.key == "door_open_time":
+        if self.entity_description.key == "notify_door_open_time":
             current_settings = dict(self.coordinator.data.get("notification_settings", {}))
             if "param_list" in current_settings:
                 for item in current_settings["param_list"]:
