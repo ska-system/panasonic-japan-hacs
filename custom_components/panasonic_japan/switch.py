@@ -108,13 +108,18 @@ async def async_setup_entry(
 
     entities = []
     for description in SWITCHES:
-        source_data = (
-            notification_settings
-            if description.data_source == "notification_settings"
-            else device_status
-        )
-        if description.status_key in source_data:
-            entities.append(PanasonicSwitch(coordinator, description))
+        if description.data_source == "notification_settings":
+            # notification_settings の場合は param_list 配列内をチェックする
+            param_list = notification_settings.get("param_list", [])
+            exists = any(
+                item.get("param_name") == description.status_key
+                for item in param_list
+            )
+            if exists:
+                entities.append(PanasonicSwitch(coordinator, description))
+        else:
+            if description.status_key in device_status:
+                entities.append(PanasonicSwitch(coordinator, description))
 
     async_add_entities(entities)
 
