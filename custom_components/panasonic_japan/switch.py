@@ -109,17 +109,17 @@ async def async_setup_entry(
     entities = []
     for description in SWITCHES:
         if description.data_source == "notification_settings":
-            # notification_settings の場合は param_list 配列内をチェックする
             param_list = notification_settings.get("param_list", [])
             exists = any(
                 item.get("param_name") == description.status_key
                 for item in param_list
             )
             if exists:
-                entities.append(PanasonicSwitch(coordinator, description))
+                # 第3引数に entry.entry_id を渡すように変更
+                entities.append(PanasonicSwitch(coordinator, description, entry.entry_id))
         else:
             if description.status_key in device_status:
-                entities.append(PanasonicSwitch(coordinator, description))
+                entities.append(PanasonicSwitch(coordinator, description, entry.entry_id))
 
     async_add_entities(entities)
 
@@ -133,10 +133,12 @@ class PanasonicSwitch(CoordinatorEntity[PanasonicDataUpdateCoordinator], SwitchE
         self,
         coordinator: PanasonicDataUpdateCoordinator,
         description: PanasonicSwitchDescription,
+        entry_id: str,
     ) -> None:
         """Initialize."""
         super().__init__(coordinator)
         self.entity_description = description
+        self._entry_id = entry_id
         self._attr_unique_id = f"{coordinator.appliance_id}_{description.key}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.appliance_id)},
@@ -200,10 +202,21 @@ class PanasonicSwitch(CoordinatorEntity[PanasonicDataUpdateCoordinator], SwitchE
                 self.coordinator.appliance_id,
                 current_settings,
             )
+
+            # 更新後にコーディネータをリフレッシュ
+            await self.coordinator.async_request_refresh()
+
+            # ドアモニターの場合は Numberエンティティ側も明示的に状態を再描画させる
+            if target_key == "doorOpenInfo":
+                custom_data = self.hass.data.get(DOMAIN, {}).get(f"{self._entry_id}_custom", {})
+                number_entities = custom_data.get("number_entities", {})
+                if "notify_door_open_time" in number_entities:
+                    number_entities["notify_door_open_time"].async_write_ha_state()
+
         else:
             await self.hass.async_add_executor_job(
                 self.coordinator.api.control_device,
                 self.coordinator.appliance_id,
                 payload,
             )
-        await self.coordinator.async_request_refresh()
+            await self.coordinator.async_request_refresh()
