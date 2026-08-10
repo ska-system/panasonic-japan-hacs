@@ -148,13 +148,6 @@ class PanasonicSwitch(CoordinatorEntity[PanasonicDataUpdateCoordinator], SwitchE
     @property
     def is_on(self) -> bool | None:
         """Return current state."""
-        source = self.entity_description.data_source
-        return self.coordinator.data.get(source, {}).get(
-            self.entity_description.status_key
-        )
-    @property
-    def is_on(self) -> bool | None:
-        """Return current state."""
         if self.entity_description.data_source == "notification_settings":
             param_list = self.coordinator.data.get("notification_settings", {}).get("param_list", [])
             for item in param_list:

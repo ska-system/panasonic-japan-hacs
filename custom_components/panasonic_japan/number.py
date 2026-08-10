@@ -184,8 +184,11 @@ class PanasonicNumber(CoordinatorEntity[PanasonicDataUpdateCoordinator], NumberE
             param_list = self.coordinator.data.get("notification_settings", {}).get("param_list", [])
             for item in param_list:
                 if item.get("param_name") == "doorOpenInfo":
-                    return item.get("param_time", 1)
-            return 1
+                    if "param_time" in item:
+                        return item.get("param_time", 1)
+                    else:
+                        return 0
+            return 0
         return self._attr_native_value
 
     async def async_set_native_value(self, value: float) -> None:
