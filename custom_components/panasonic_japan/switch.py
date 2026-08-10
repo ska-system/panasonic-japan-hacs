@@ -187,6 +187,8 @@ class PanasonicSwitch(CoordinatorEntity[PanasonicDataUpdateCoordinator], SwitchE
                                 if "param_time" in item:
                                     del item["param_time"]
                         break
+
+            self.coordinator.data["notification_settings"] = current_settings
             
             await self.hass.async_add_executor_job(
                 self.coordinator.api.update_notification_settings,
