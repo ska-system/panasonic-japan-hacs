@@ -216,8 +216,6 @@ class PanasonicNumber(CoordinatorEntity[PanasonicDataUpdateCoordinator], NumberE
                             item["param_value"] = True
                             item["param_time"] = int(value)
                         break
-
-            self.coordinator.data["notification_settings"] = current_settings
             
             await self.hass.async_add_executor_job(
                 self.coordinator.api.update_notification_settings,
