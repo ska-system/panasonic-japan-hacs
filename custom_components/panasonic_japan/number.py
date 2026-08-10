@@ -61,7 +61,7 @@ NUMBERS: tuple[PanasonicNumberDescription, ...] = (
         key="notify_door_open_time",
         translation_key="notify_door_open_time",
         icon="mdi:timer-alert",
-        native_min_value=1,
+        native_min_value=0,
         native_max_value=72,
         native_step=1,
         native_unit_of_measurement=UnitOfTime.HOURS,
@@ -133,7 +133,7 @@ class PanasonicNumber(CoordinatorEntity[PanasonicDataUpdateCoordinator], NumberE
     def native_min_value(self) -> float:
         """Return dynamic minimum value based on mode."""
         if self.entity_description.key == "notify_door_open_time":
-            return 1
+            return 0
         mode = self._get_current_mode()
         if self.entity_description.key == "cooling_assist_time":
             if mode == "off":
@@ -205,9 +205,13 @@ class PanasonicNumber(CoordinatorEntity[PanasonicDataUpdateCoordinator], NumberE
             if "param_list" in current_settings:
                 for item in current_settings["param_list"]:
                     if item.get("param_name") == "doorOpenInfo":
-                        # 時間を設定する際は確実に有効（ON）にする
-                        item["param_value"] = True
-                        item["param_time"] = int(value)
+                        if int(value) == 0:
+                            item["param_value"] = False
+                            if "param_time" in item:
+                                del item["param_time"]
+                        else:
+                            item["param_value"] = True
+                            item["param_time"] = int(value)
                         break
             
             await self.hass.async_add_executor_job(
