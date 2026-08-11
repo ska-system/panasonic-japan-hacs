@@ -1,6 +1,7 @@
 # Panasonic Japan Kitchen Appliances Home Assistant Integration
 
-This project provides a Home Assistant custom component to integrate and monitor Panasonic Japan kitchen appliances (fridges, etc.).
+This project provides a Home Assistant custom component to integrate and monitor Panasonic Japan kitchen appliances.
+**Note:** This integration is currently designed specifically for **Panasonic refrigerators** and has been verified to work with the **NR-F607HPX-N** model.
 
 ### Acknowledgments
 
