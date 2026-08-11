@@ -252,6 +252,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     errors=errors,
                 )
 
+            _LOGGER.error("DEBUG USER_INFO: %s", user_info)
             # 正しいメタデータの階層から member_user_id を取得
             app_metadata = user_info.get("https://club.panasonic.jp/userinfo/app_metadata", {})
             member_id = app_metadata.get("member_user_id")
