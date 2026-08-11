@@ -13,7 +13,7 @@ This integration is a fork and enhancement of the original work by **yuyuvn**. I
 ## Features
 
 * **Cost Reduction Tracking**: Monitor energy savings from eco features
-* **Device Status**: Operation mode, firmware version, and device status
+* **Device Status & Controls**: Operation mode, compartment modes, cooling assist, and detailed settings
 * **Push Notifications & Events**: Real-time event handling via FCM push notifications (door status, water shortage, ice completion, errors, etc.)
 * **Real-time Updates**: Automatic updates every 5 minutes
 * **Enhanced Debugging**: Added User-Agent and refined API header handling
@@ -56,13 +56,30 @@ The integration uses Auth0 PKCE (Proof Key for Code Exchange) flow for secure au
 * Discover your appliance
 * Complete the setup
 
-## Entities
+## Entities & Controls
 
 ### Sensors
-
-* **Electricity Cost Reduction**: Energy savings from eco features (yen) 
-* **Operation Mode**: Current operation mode (econavi, normal, etc.)
+* **Cooloven State**: Cool-oven / cooling assist operational state
+* **Electricity Cost Reduction**: Energy savings from eco features (yen)
+* **Operation Mode**: Current operation mode
 * **Firmware Version**: Current firmware version
+
+### Select (Modes)
+* **Partial Compartment Mode**: Partial Strong, Medium, Weak, Chilled
+* **Cold Room Temperature / Light**: Temperature and interior light settings
+* **Freezer Temperature**: Freezer room mode settings
+* **Cooling Assist Mode**: Off, Quench, Cold, Frozen
+* **Door Alarms Mode**: Medium, High
+
+### Number (Settings)
+* **Cooling Assist Time / Second**: Timer configurations for cooling assist
+* **Notification: Door Monitor Time**: Threshold time for door open alerts
+
+### Switches & Buttons
+* **Fast Ice / Stop Ice**: Ice-making controls
+* **Econavi Lamp**: Econavi indicator switch
+* **Notification Toggles**: Water shortage, Cooling assist, Ice complete, Error occurred, Door open
+* **Cooling Assist (Button)**: Trigger action button
 
 ## Events
 
