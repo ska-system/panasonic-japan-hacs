@@ -28,6 +28,13 @@ _PUSH_KEY = f"{DOMAIN}_push"
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Panasonic Japan from a config entry."""
     coordinator = PanasonicDataUpdateCoordinator(hass, entry)
+
+    # Start push notification listener (non-blocking; failure is logged, not fatal)
+    push_handler = PanasonicPushHandler(hass, coordinator.api, entry)
+    hass.data.setdefault(_PUSH_KEY, {})[entry.entry_id] = push_handler
+    await push_handler.async_start()
+
+    # 2. term_id が確保された状態でコーディネータの初回リフレッシュを実行する
     await coordinator.async_config_entry_first_refresh()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
@@ -53,11 +60,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.services.async_register(DOMAIN, "set_cooloven", handle_set_cooloven)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-    # Start push notification listener (non-blocking; failure is logged, not fatal)
-    push_handler = PanasonicPushHandler(hass, coordinator.api, entry)
-    hass.data.setdefault(_PUSH_KEY, {})[entry.entry_id] = push_handler
-    hass.async_create_task(push_handler.async_start())
 
     await hass.http.async_register_static_paths([
         StaticPathConfig(
