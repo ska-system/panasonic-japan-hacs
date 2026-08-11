@@ -237,8 +237,27 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     errors=errors,
                 )
 
-            # Validate token by getting user info
             api = PanasonicAPI(access_token=access_token)
+            
+            # Validate token by getting user info
+            # Auth0のuserinfoから member_user_id を取得
+            auth0_user_info = await self.hass.async_add_executor_job(api.get_auth0_user_info)
+            app_metadata = auth0_user_info.get("https://club.panasonic.jp/userinfo/app_metadata", {})
+            member_id = app_metadata.get("member_user_id")
+
+            _LOGGER.error("DEBUG AUTH0_USER_INFO: %s", auth0_user_info)
+
+            if not member_id:
+                errors["base"] = "invalid_token"
+                return self.async_show_form(
+                    step_id="callback",
+                    data_schema=get_callback_schema(login_url),
+                    description_placeholders={
+                        "login_url": login_url,
+                    },
+                    errors=errors,
+                )
+            
             user_info = await self.hass.async_add_executor_job(api.get_user_info)
 
             if not user_info or not user_info.get("myAppliances"):
@@ -253,20 +272,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 )
 
             _LOGGER.error("DEBUG USER_INFO: %s", user_info)
-            # 正しいメタデータの階層から member_user_id を取得
-            app_metadata = user_info.get("https://club.panasonic.jp/userinfo/app_metadata", {})
-            member_id = app_metadata.get("member_user_id")
-
-            if not member_id:
-                errors["base"] = "invalid_token"
-                return self.async_show_form(
-                    step_id="callback",
-                    data_schema=get_callback_schema(login_url),
-                    description_placeholders={
-                        "login_url": login_url,
-                    },
-                    errors=errors,
-                )
 
             self.context["token_response"] = token_response
             self.context["user_info"] = user_info

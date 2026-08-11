@@ -97,6 +97,14 @@ class PanasonicAPI:
 
         return response
 
+    def get_auth0_user_info(self) -> dict[str, Any]:
+        """Get Auth0 user info including app_metadata and member_user_id."""
+        url = f"https://{AUTH0_DOMAIN}/userinfo"
+        headers = self._get_headers()
+        response = self._make_request("GET", url, headers=headers, timeout=30)
+        response.raise_for_status()
+        return response.json()
+
     def get_user_info(self) -> dict[str, Any]:
         """Get user information and list of appliances."""
         url = f"{KAPF_API_BASE_URL}/user/info"
