@@ -3,11 +3,10 @@ from __future__ import annotations
 
 import base64
 import hashlib
-import json
 import logging
 import secrets
 from typing import Any
-from urllib.parse import parse_qs, quote, urlparse
+from urllib.parse import parse_qs, urlparse
 
 import requests
 import voluptuous as vol
@@ -41,15 +40,6 @@ def get_callback_schema(login_url: str = "") -> vol.Schema:
     )
 
 
-def get_identifier_schema() -> vol.Schema:
-    """Get identifier input schema."""
-    return vol.Schema(
-        {
-            vol.Required("identifier"): str,
-        }
-    )
-
-
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Panasonic Japan."""
 
@@ -78,11 +68,16 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, code_challenge: str, state: str, nonce: str
     ) -> str:
         """Generate Auth0 login URL."""
+        from urllib.parse import quote
+
+        # Auth0Client parameter (base64 encoded JSON)
         auth0_client = {
             "name": "Auth0.Android",
             "env": {"android": "31"},
             "version": "2.5.0",
         }
+        import json
+
         auth0_client_json = json.dumps(auth0_client, separators=(",", ":"))
         auth0_client_b64 = base64.b64encode(
             auth0_client_json.encode("utf-8")
@@ -251,9 +246,16 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     errors=errors,
                 )
 
-            member_id = user_info.get("member_user_id")
-            if not member_id:
-                errors["base"] = "invalid_token"
+            # Get first appliance (fridge)
+            appliances = user_info.get("myAppliances", [])
+            fridge_appliance = None
+            for appliance in appliances:
+                if appliance.get("eoj") == "03B7":  # Fridge EOJ
+                    fridge_appliance = appliance
+                    break
+
+            if not fridge_appliance:
+                errors["base"] = "no_fridge_found"
                 return self.async_show_form(
                     step_id="callback",
                     data_schema=get_callback_schema(login_url),
@@ -263,12 +265,27 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     errors=errors,
                 )
 
-            # Contextにトークン・ユーザー情報を保持して識別子入力ステップへ遷移
-            self.context["token_response"] = token_response
-            self.context["user_info"] = user_info
-            self.context["member_id"] = member_id
+            appliance_id = fridge_appliance["info"]["applianceId"]
+            product_code = fridge_appliance["info"]["productCode"]
 
-            return await self.async_step_identifier()
+            # Check if already configured
+            await self.async_set_unique_id(appliance_id)
+            self._abort_if_unique_id_configured()
+
+            # Store tokens and device info
+            entry_data = {
+                CONF_ACCESS_TOKEN: access_token,
+                "appliance_id": appliance_id,
+                "product_code": product_code,
+            }
+
+            if refresh_token:
+                entry_data["refresh_token"] = refresh_token
+
+            return self.async_create_entry(
+                title=f"Panasonic Fridge ({product_code})",
+                data=entry_data,
+            )
 
         except Exception as err:
             _LOGGER.exception("Unexpected exception: %s", err)
@@ -281,68 +298,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 },
                 errors=errors,
             )
-
-    async def async_step_identifier(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """Handle identifier input step to name the CLUB Panasonic account."""
-        errors = {}
-
-        if user_input is None:
-            return self.async_show_form(
-                step_id="identifier",
-                data_schema=get_identifier_schema(),
-                errors=errors,
-            )
-
-        identifier = user_input.get("identifier", "").strip()
-        if not identifier:
-            errors["base"] = "identifier_required"
-            return self.async_show_form(
-                step_id="identifier",
-                data_schema=get_identifier_schema(),
-                errors=errors,
-            )
-
-        member_id = self.context.get("member_id")
-        token_response = self.context.get("token_response", {})
-        user_info = self.context.get("user_info", {})
-
-        access_token = token_response.get("access_token")
-        refresh_token = token_response.get("refresh_token")
-
-        appliances = user_info.get("myAppliances", [])
-        fridge_appliance = None
-        for appliance in appliances:
-            if appliance.get("eoj") == "03B7":
-                fridge_appliance = appliance
-                break
-
-        if not fridge_appliance:
-            return self.async_abort(reason="no_fridge_found")
-
-        appliance_id = fridge_appliance["info"]["applianceId"]
-        product_code = fridge_appliance["info"]["productCode"]
-
-        # member_idをユニークキーとして設定
-        await self.async_set_unique_id(member_id)
-        self._abort_if_unique_id_configured()
-
-        entry_data = {
-            CONF_ACCESS_TOKEN: access_token,
-            "appliance_id": appliance_id,
-            "product_code": product_code,
-            "member_id": member_id,
-            "identifier": identifier,
-        }
-
-        if refresh_token:
-            entry_data["refresh_token"] = refresh_token
-
-        return self.async_create_entry(
-            title=f"CLUB Panasonic: {identifier}",
-            data=entry_data,
-        )
 
     async def async_step_reconfigure(
         self, user_input: dict[str, Any] | None = None
@@ -456,24 +411,18 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             appliance_id = fridge_appliance["info"]["applianceId"]
             product_code = fridge_appliance["info"]["productCode"]
-            member_id = user_info.get("member_user_id")
-
-            existing_entry = self._get_reconfigure_entry()
-            current_identifier = existing_entry.data.get("identifier", "Account")
 
             new_data = {
                 CONF_ACCESS_TOKEN: access_token,
                 "appliance_id": appliance_id,
                 "product_code": product_code,
-                "member_id": member_id,
-                "identifier": current_identifier,
             }
             if refresh_token:
                 new_data["refresh_token"] = refresh_token
 
             return self.async_update_reload_and_abort(
-                existing_entry,
-                title=f"CLUB Panasonic: {current_identifier}",
+                self._get_reconfigure_entry(),
+                title=f"Panasonic Fridge ({product_code})",
                 data=new_data,
             )
 
