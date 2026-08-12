@@ -273,8 +273,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             _LOGGER.error("DEBUG USER_INFO: %s", user_info)
 
+            # アカウント配下の家電一覧を取得してコンテキストに保持
+            appliances = user_info.get("myAppliances", [])
+
             self.context["token_response"] = token_response
             self.context["member_id"] = member_id
+            self.context["appliances"] = appliances
 
             return await self.async_step_identifier()
 
@@ -313,6 +317,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
 
         member_id = self.context.get("member_id")
+        appliances = self.context.get("appliances", [])
         token_response = self.context.get("token_response", {})
 
         access_token = token_response.get("access_token")
@@ -326,6 +331,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_ACCESS_TOKEN: access_token,
             "member_id": member_id,
             "identifier": identifier,
+            "appliances": appliances,
         }
 
         if refresh_token:
@@ -421,10 +427,16 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             current_identifier = existing_entry.data.get("identifier", "Account")
             member_id = existing_entry.data.get("member_id")
 
+            # 再認証時にも家電リストを最新化
+            api = PanasonicAPI(access_token=access_token)
+            user_info = await self.hass.async_add_executor_job(api.get_user_info)
+            appliances = user_info.get("myAppliances", []) if user_info else existing_entry.data.get("appliances", [])
+
             new_data = {
                 CONF_ACCESS_TOKEN: access_token,
                 "member_id": member_id,
                 "identifier": current_identifier,
+                "appliances": appliances,
             }
             if refresh_token:
                 new_data["refresh_token"] = refresh_token
