@@ -40,10 +40,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     device_reg = dr.async_get(hass)
 
     for appliance_info in appliances:
+        # info ディクショナリから必要な値を抽出・補完する
         info_dict = appliance_info.get("info", {})
         appliance_id = info_dict.get("applianceId") or appliance_info.get("appliance_id")
         product_code = info_dict.get("productCode") or appliance_info.get("product_code")
-        
+
+        # コーディネーターが参照しやすいようトップレベルにもキーをセット
+        if appliance_id:
+            appliance_info["appliance_id"] = appliance_id
+        if product_code:
+            appliance_info["product_code"] = product_code
+            
         _LOGGER.info("[DEBUG_LOG] Processing appliance_id: %s, info: %s", appliance_id, appliance_info)
 
         if not appliance_id:
