@@ -20,6 +20,16 @@
         "data_description": {
           "callback_url": "ログイン後に取得したコールバック URL 全体を貼り付けてください"
         }
+      },
+      "identifier": {
+        "title": "アカウント名の設定",
+        "description": "複数アカウントを管理するため、この CLUB Panasonic アカウントを識別する任意の名前（例: メインアカウント、自宅など）を入力してください。",
+        "data": {
+          "identifier": "アカウント識別名"
+        },
+        "data_description": {
+          "identifier": "アカウントを区別するための分かりやすい名前を入力してください"
+        }
       }
     },
     "error": {
