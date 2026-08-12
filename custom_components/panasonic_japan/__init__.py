@@ -7,6 +7,7 @@ from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.helpers import device_registry as dr
 
 from .const import DOMAIN
 from .coordinator import PanasonicDataUpdateCoordinator
@@ -38,6 +39,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await coordinator.async_config_entry_first_refresh()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+
+    # デバイスレジストリへ子デバイスとして登録する
+    device_registry = dr.async_get(hass)
+    if coordinator.appliance_id:
+        device_registry.async_get_or_create(
+            config_entry_id=entry.entry_id,
+            identifiers={(DOMAIN, coordinator.appliance_id)},
+            manufacturer="Panasonic",
+            name=f"Panasonic Fridge ({coordinator.product_code})",
+            model=coordinator.product_code,
+        )
 
     async def handle_set_cooloven(call: ServiceCall):
         mode = call.data.get("mode")

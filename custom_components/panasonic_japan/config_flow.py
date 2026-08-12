@@ -51,7 +51,7 @@ def get_identifier_schema() -> vol.Schema:
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Panasonic Japan."""
+    """Handle a config flow for Panasonic Japan (Account-level Hub)."""
 
     VERSION = 1
 
@@ -260,7 +260,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             
             user_info = await self.hass.async_add_executor_job(api.get_user_info)
 
-            if not user_info or not user_info.get("myAppliances"):
+            if not user_info:
                 errors["base"] = "invalid_token"
                 return self.async_show_form(
                     step_id="callback",
@@ -274,7 +274,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.error("DEBUG USER_INFO: %s", user_info)
 
             self.context["token_response"] = token_response
-            self.context["user_info"] = user_info
             self.context["member_id"] = member_id
 
             return await self.async_step_identifier()
@@ -315,31 +314,16 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         member_id = self.context.get("member_id")
         token_response = self.context.get("token_response", {})
-        user_info = self.context.get("user_info", {})
 
         access_token = token_response.get("access_token")
         refresh_token = token_response.get("refresh_token")
 
-        appliances = user_info.get("myAppliances", [])
-        fridge_appliance = None
-        for appliance in appliances:
-            if appliance.get("eoj") == "03B7":
-                fridge_appliance = appliance
-                break
-
-        if not fridge_appliance:
-            return self.async_abort(reason="no_fridge_found")
-
-        appliance_id = fridge_appliance["info"]["applianceId"]
-        product_code = fridge_appliance["info"]["productCode"]
-
+        # アカウント単位でのユニークIDを設定
         await self.async_set_unique_id(member_id)
         self._abort_if_unique_id_configured()
 
         entry_data = {
             CONF_ACCESS_TOKEN: access_token,
-            "appliance_id": appliance_id,
-            "product_code": product_code,
             "member_id": member_id,
             "identifier": identifier,
         }
@@ -348,14 +332,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             entry_data["refresh_token"] = refresh_token
 
         return self.async_create_entry(
-            title=f"CLUB Panasonic: {identifier}",
+            title=f"CLUB Panasonic Account: {identifier}",
             data=entry_data,
         )
 
     async def async_step_reconfigure(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Handle reconfiguration - redo the login flow and update tokens."""
+        """Handle reconfiguration - redo the login flow and update account tokens."""
         # Generate new PKCE parameters
         code_verifier, code_challenge, state, nonce = self._generate_pkce()
 
@@ -433,48 +417,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     errors=errors,
                 )
 
-            # Validate token
-            api = PanasonicAPI(access_token=access_token)
-            user_info = await self.hass.async_add_executor_job(api.get_user_info)
-
-            if not user_info or not user_info.get("myAppliances"):
-                errors["base"] = "invalid_token"
-                return self.async_show_form(
-                    step_id="reconfigure_callback",
-                    data_schema=get_callback_schema(login_url),
-                    description_placeholders={"login_url": login_url},
-                    errors=errors,
-                )
-
-            appliances = user_info.get("myAppliances", [])
-            fridge_appliance = None
-            for appliance in appliances:
-                if appliance.get("eoj") == "03B7":
-                    fridge_appliance = appliance
-                    break
-
-            if not fridge_appliance:
-                errors["base"] = "no_fridge_found"
-                return self.async_show_form(
-                    step_id="reconfigure_callback",
-                    data_schema=get_callback_schema(login_url),
-                    description_placeholders={"login_url": login_url},
-                    errors=errors,
-                )
-
-            appliance_id = fridge_appliance["info"]["applianceId"]
-            product_code = fridge_appliance["info"]["productCode"]
-            
-            app_metadata = user_info.get("https://club.panasonic.jp/userinfo/app_metadata", {})
-            member_id = app_metadata.get("member_user_id")
-
             existing_entry = self._get_reconfigure_entry()
             current_identifier = existing_entry.data.get("identifier", "Account")
+            member_id = existing_entry.data.get("member_id")
 
             new_data = {
                 CONF_ACCESS_TOKEN: access_token,
-                "appliance_id": appliance_id,
-                "product_code": product_code,
                 "member_id": member_id,
                 "identifier": current_identifier,
             }
@@ -483,7 +431,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             return self.async_update_reload_and_abort(
                 existing_entry,
-                title=f"CLUB Panasonic: {current_identifier}",
+                title=f"CLUB Panasonic Account: {current_identifier}",
                 data=new_data,
             )
 
