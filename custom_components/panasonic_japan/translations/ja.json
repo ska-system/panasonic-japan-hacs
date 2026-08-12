@@ -42,7 +42,7 @@
       "unknown": "予期しないエラーが発生しました"
       },
     "abort": {
-      "already_configured": "このデバイスは既に設定済みです"
+      "already_configured": "このアカウントは既に設定済みです"
     }
   },
   "entity": {
