@@ -40,7 +40,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     device_reg = dr.async_get(hass)
 
     for appliance_info in appliances:
-        appliance_id = appliance_info.get("appliance_id")
+        info_dict = appliance_info.get("info", {})
+        appliance_id = info_dict.get("applianceId") or appliance_info.get("appliance_id")
+        product_code = info_dict.get("productCode") or appliance_info.get("product_code")
+        
         _LOGGER.info("[DEBUG_LOG] Processing appliance_id: %s, info: %s", appliance_id, appliance_info)
 
         if not appliance_id:
@@ -51,18 +54,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await coordinator.async_config_entry_first_refresh()
         coordinators[appliance_id] = coordinator
 
-        eoj_upper = (coordinator.eoj or "").upper()
+        eoj_upper = (coordinator.eoj or appliance_info.get("eoj", "")).upper()
         device_type_name = EOJ_NAME_MAP.get(eoj_upper, "Appliance")
-        device_name = f"Panasonic {device_type_name} ({coordinator.product_code})"
+        resolved_product_code = coordinator.product_code or product_code
+        device_name = f"Panasonic {device_type_name} ({resolved_product_code})"
 
         _LOGGER.info("[DEBUG_LOG] Creating device in DeviceRegistry: %s (id: %s)", device_name, appliance_id)
-        # 家電デバイスをConfigEntry直下のデバイスとして登録（via_deviceは指定しない）
         device_reg.async_get_or_create(
             config_entry_id=entry.entry_id,
             identifiers={(DOMAIN, appliance_id)},
             manufacturer="Panasonic",
             name=device_name,
-            model=coordinator.product_code,
+            model=resolved_product_code,
         )
         
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinators
