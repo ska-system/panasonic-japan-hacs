@@ -11,6 +11,7 @@ AUTH0_CLIENT_ID = "w7UI3iLByFFz3GOj6Ef6BCHfPczOcsy8"
 AUTH0_AUDIENCE = "https://club.panasonic.jp/w7UI3iLByFFz3GOj6Ef6BCHfPczOcsy8/api/v1/"
 AUTH0_TOKEN_URL = f"https://{AUTH0_DOMAIN}/oauth/token"
 API_KEY = "x6pdB3r5z2eqDCgwf0gF1Ffre7Au7Km3YoFY0fDh"
+USER_AGENT = "KitchenPocketA/5.4.1"
 
 # Status usages values (eUsagesItem enum from Android app)
 USAGES_TOP_SCREEN     = 1   # returns: operation_mode, cooloven_in_seconds, house_sitting, etc.
