@@ -101,6 +101,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             "redirect_uri": quote(REDIRECT_URI),
             "state": state,
             "nonce": nonce,
+            "prompt": "login",
         }
 
         query_string = "&".join(f"{k}={v}" for k, v in params.items())

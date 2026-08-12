@@ -3,8 +3,8 @@
     "step": {
       "reconfigure_callback": {
         "title": "Re-authenticate Panasonic Japan",
+        "description": "Re-authenticate your Panasonic account to update the access token.\n\n**Step 1:** Click [here to open the login page]({login_url}) in your browser.\n\n**Step 2:** After logging in, copy the entire callback URL and paste it below.",
         "data": {
-          "description": "Re-authenticate your Panasonic account to update the access token.\n\n**Step 1:** Click the login URL below to open the login page in your browser:\n\n**Login URL:**\n`{login_url}`\n\n**Step 2:** After logging in, copy the entire callback URL and paste it below.",
           "callback_url": "Callback URL"
         },
         "data_description": {
@@ -13,7 +13,7 @@
       },
       "callback": {
         "title": "Panasonic Japan Authentication",
-        "description": "**Step 1:** Click the login URL below to open the login page in your browser (if the page does not open, please delete the cookie for auth.digital.panasonic.com):\n\n**Login URL:**\n`{login_url}`\n\n**Step 2:** After logging in with your Panasonic account, you'll be redirected to a callback URL (if not redirected, open developer tools with F12 and copy the failing URL).\n\n**Step 3:** Copy the entire callback URL (it will look like `com.panasonic.jp.kitchenpocket.auth0://auth.digital.panasonic.com/android/com.panasonic.jp.kitchenpocket/callback?code=...&state=...`) and paste it in the field below.",
+        "description": "**Step 1:** Click [here to open the login page]({login_url}) in your browser.\n\n**Step 2:** After logging in with your Panasonic account, you'll be redirected to a callback URL (if not redirected, open developer tools with F12 and copy the failing URL).\n\n**Step 3:** Copy the entire callback URL (it will look like `com.panasonic.jp.kitchenpocket.auth0://...`) and paste it in the field below.",
         "data": {
           "callback_url": "Callback URL"
         },
