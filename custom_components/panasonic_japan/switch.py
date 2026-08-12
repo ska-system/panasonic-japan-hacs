@@ -7,11 +7,11 @@ from typing import Any
 
 from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.helpers.entity import EntityCategory
 
 from .const import DOMAIN
 from .coordinator import PanasonicDataUpdateCoordinator
@@ -29,25 +29,25 @@ class PanasonicSwitchDescription(SwitchEntityDescription):
 SWITCHES: tuple[PanasonicSwitchDescription, ...] = (
     PanasonicSwitchDescription(
         key="fast_ice",
-        translation_key = "fast_ice_status",
+        translation_key="fast_ice_status",
         icon="mdi:snowflake-variant",
         status_key="fast_ice_status",
     ),
     PanasonicSwitchDescription(
         key="stop_ice",
-        translation_key = "stop_ice_status",
+        translation_key="stop_ice_status",
         icon="mdi:snowflake-off",
         status_key="stop_ice_status",
     ),
     PanasonicSwitchDescription(
         key="fresh_frozen",
-        translation_key = "fresh_frozen_status",
+        translation_key="fresh_frozen_status",
         icon="mdi:fridge-industrial",
         status_key="fresh_frozen_status",
     ),
     PanasonicSwitchDescription(
         key="econavi_lamp",
-        translation_key = "econavi_lamp_status",
+        translation_key="econavi_lamp_status",
         icon="mdi:lightbulb",
         status_key="econavi_lamp_status",
     ),
@@ -100,28 +100,30 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Panasonic Japan switches from a config entry."""
-    coordinator: PanasonicDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
-
-    # Only add switches whose status key is present in coordinator data
-    device_status = coordinator.data.get("device_status", {})
-    notification_settings = coordinator.data.get("notification_settings", {})
+    coordinators: dict[str, PanasonicDataUpdateCoordinator] = hass.data[DOMAIN][entry.entry_id]
 
     entities = []
-    for description in SWITCHES:
-        if description.data_source == "notification_settings":
-            # notification_settings の場合は param_list 配列内をチェックする
-            param_list = notification_settings.get("param_list", [])
-            exists = any(
-                item.get("param_name") == description.status_key
-                for item in param_list
-            )
-            if exists:
-                entities.append(PanasonicSwitch(coordinator, description))
-        else:
-            if description.status_key in device_status:
-                entities.append(PanasonicSwitch(coordinator, description))
+    for coordinator in coordinators.values():
+        if (coordinator.eoj or "").upper() == "03B7":
+            data = coordinator.data or {}
+            device_status = data.get("device_status", {})
+            notification_settings = data.get("notification_settings", {})
+
+            for description in SWITCHES:
+                if description.data_source == "notification_settings":
+                    param_list = notification_settings.get("param_list", [])
+                    exists = any(
+                        item.get("param_name") == description.status_key
+                        for item in param_list
+                    )
+                    if exists:
+                        entities.append(PanasonicSwitch(coordinator, description))
+                else:
+                    if description.status_key in device_status:
+                        entities.append(PanasonicSwitch(coordinator, description))
 
     async_add_entities(entities)
+
 
 class PanasonicSwitch(CoordinatorEntity[PanasonicDataUpdateCoordinator], SwitchEntity):
     """A controllable boolean switch on the Panasonic fridge."""
@@ -148,12 +150,13 @@ class PanasonicSwitch(CoordinatorEntity[PanasonicDataUpdateCoordinator], SwitchE
     @property
     def is_on(self) -> bool | None:
         """Return current state."""
+        data = self.coordinator.data or {}
         if self.entity_description.data_source == "notification_settings":
-            param_list = self.coordinator.data.get("notification_settings", {}).get("param_list", [])
+            param_list = data.get("notification_settings", {}).get("param_list", [])
             for item in param_list:
                 if item.get("param_name") == self.entity_description.status_key:
                     return item.get("param_value")
-            return False # 見つからない場合
+            return False
 
         # 通常のデバイスステータスの場合
         return self.coordinator.data.get("device_status", {}).get(self.entity_description.status_key)
@@ -167,8 +170,10 @@ class PanasonicSwitch(CoordinatorEntity[PanasonicDataUpdateCoordinator], SwitchE
         await self._control({self.entity_description.status_key: False})
 
     async def _control(self, payload: dict[str, Any]) -> None:
+        """Send command to device or update notification settings."""
+        data = self.coordinator.data or {}
         if self.entity_description.data_source == "notification_settings":
-            current_settings = dict(self.coordinator.data.get("notification_settings", {}))
+            current_settings = dict(data.get("notification_settings", {}))
             
             target_key = self.entity_description.status_key
             target_value = payload.get(target_key)
