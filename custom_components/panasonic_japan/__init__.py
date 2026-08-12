@@ -37,6 +37,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinators: dict[str, PanasonicDataUpdateCoordinator] = {}
     device_reg = dr.async_get(hass)
 
+    # 1. 親ハブ（CLUB Panasonic アカウント）のデバイス登録
+    hub_device = device_reg.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, entry.entry_id)},
+        manufacturer="Panasonic",
+        name=f"CLUB Panasonic Account ({entry.title})",
+        model="Panasonic Cloud Hub",
+    )
+
     for appliance_info in appliances:
         appliance_id = appliance_info.get("appliance_id")
         if not appliance_id:
@@ -50,9 +59,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         device_type_name = EOJ_NAME_MAP.get(eoj_upper, "Appliance")
         device_name = f"Panasonic {device_type_name} ({coordinator.product_code})"
 
+        # 2. 家電デバイスを親ハブの配下 (via_device) として登録
         device_reg.async_get_or_create(
             config_entry_id=entry.entry_id,
             identifiers={(DOMAIN, appliance_id)},
+            via_device=(DOMAIN, entry.entry_id),
             manufacturer="Panasonic",
             name=device_name,
             model=coordinator.product_code,
