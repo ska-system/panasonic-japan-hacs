@@ -275,6 +275,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             # アカウント配下の家電一覧を取得してコンテキストに保持
             appliances = user_info.get("myAppliances", [])
+            _LOGGER.info("[DEBUG_LOG] config_flow fetched appliances: %s", appliances)
 
             self.context["token_response"] = token_response
             self.context["member_id"] = member_id

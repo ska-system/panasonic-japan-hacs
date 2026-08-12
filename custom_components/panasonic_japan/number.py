@@ -111,7 +111,6 @@ class PanasonicNumber(CoordinatorEntity[PanasonicDataUpdateCoordinator], NumberE
 
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.appliance_id)},
-            via_device=(DOMAIN, coordinator.config_entry.entry_id),
             name=f"Panasonic Fridge ({coordinator.product_code})",
             manufacturer="Panasonic",
             model=coordinator.product_code,

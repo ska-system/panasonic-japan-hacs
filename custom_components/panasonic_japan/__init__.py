@@ -19,6 +19,8 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Panasonic Japan from a config entry."""
     appliances = entry.data.get("appliances", [])
+    _LOGGER.info("[DEBUG_LOG] appliances in entry.data: %s", appliances)    
+
     if not appliances:
         _LOGGER.error("No appliances found in config entry")
         return False
@@ -37,18 +39,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinators: dict[str, PanasonicDataUpdateCoordinator] = {}
     device_reg = dr.async_get(hass)
 
-    # 1. 親ハブ（CLUB Panasonic アカウント）のデバイス登録
-    hub_device = device_reg.async_get_or_create(
-        config_entry_id=entry.entry_id,
-        identifiers={(DOMAIN, entry.entry_id)},
-        manufacturer="Panasonic",
-        name=f"CLUB Panasonic Account ({entry.title})",
-        model="Panasonic Cloud Hub",
-    )
-
     for appliance_info in appliances:
         appliance_id = appliance_info.get("appliance_id")
+        _LOGGER.info("[DEBUG_LOG] Processing appliance_id: %s, info: %s", appliance_id, appliance_info)
+
         if not appliance_id:
+            _LOGGER.warning("[DEBUG_LOG] appliance_id is empty, skipping.")
             continue
 
         coordinator = PanasonicDataUpdateCoordinator(hass, entry, appliance_info, api)
@@ -59,16 +55,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         device_type_name = EOJ_NAME_MAP.get(eoj_upper, "Appliance")
         device_name = f"Panasonic {device_type_name} ({coordinator.product_code})"
 
-        # 2. 家電デバイスを親ハブの配下 (via_device) として登録
+        _LOGGER.info("[DEBUG_LOG] Creating device in DeviceRegistry: %s (id: %s)", device_name, appliance_id)
+        # 家電デバイスをConfigEntry直下のデバイスとして登録（via_deviceは指定しない）
         device_reg.async_get_or_create(
             config_entry_id=entry.entry_id,
             identifiers={(DOMAIN, appliance_id)},
-            via_device=(DOMAIN, entry.entry_id),
             manufacturer="Panasonic",
             name=device_name,
             model=coordinator.product_code,
         )
-
+        
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinators
 
     async def handle_set_cooloven(call: ServiceCall):
