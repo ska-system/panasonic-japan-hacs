@@ -3,7 +3,7 @@
     "step": {
       "reconfigure_callback": {
         "title": "Panasonic Japan の再認証",
-        "description": "Panasonic アカウントを再認証してアクセストークンを更新します。\n\n**手順 1:** 以下の [ログインページをブラウザで開く]({login_url}) をクリックしてください。\n\n**手順 2:** ログイン後、リダイレクト先のコールバック URL 全体をコピーし、以下に貼り付けてください。",
+        "description": "Panasonic アカウントを再認証してアクセストークンを更新します。\n\n**手順 1:** 以下の [ログインページをブラウザで開く]({login_url}) をクリックするか、以下の URL をコピーしてブラウザで開いてください:\n\n**ログイン URL:**\n`{login_url}`\n\n**手順 2:** ログイン後、リダイレクト先のコールバック URL 全体をコピーし、以下に貼り付けてください。",
         "data": {
           "callback_url": "コールバック URL"
         },
@@ -13,7 +13,7 @@
       },
       "callback": {
         "title": "Panasonic Japan 認証",
-        "description": "**手順 1:** 以下の [ログインページをブラウザで開く]({login_url}) をクリックしてください。\n\n**手順 2:** Panasonic アカウントでログインすると、コールバック URL にリダイレクトされます。(リダイレクトされない場合は、F12で開発者ツールを開き、エラーになっているURLをコピーして下さい。)\n\n**手順 3:** コールバック URL 全体をコピーし（例: `com.panasonic.jp.kitchenpocket.auth0://...`）、以下のフィールドに貼り付けてください。",
+        "description": "**手順 1:** 以下の [ログインページをブラウザで開く]({login_url}) をクリックするか、以下の URL をコピーしてブラウザで開いてください (ページが開かない場合は、auth.digital.panasonic.comのcookieを削除してください)。\n\n**ログイン URL:**\n`{login_url}`\n\n**手順 2:** Panasonic アカウントでログインすると、コールバック URL にリダイレクトされます。(リダイレクトされない場合は、F12で開発者ツールを開き、エラーになっているURLをコピーして下さい。)\n\n**手順 3:** コールバック URL 全体をコピーし（例: `com.panasonic.jp.kitchenpocket.auth0://...`）、以下のフィールドに貼り付けてください。",
         "data": {
           "callback_url": "コールバック URL"
         },
