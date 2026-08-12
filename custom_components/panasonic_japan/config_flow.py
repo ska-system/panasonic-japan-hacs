@@ -246,7 +246,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             app_metadata = auth0_user_info.get("https://club.panasonic.jp/userinfo/app_metadata", {})
             member_id = app_metadata.get("member_user_id")
 
-            _LOGGER.error("DEBUG AUTH0_USER_INFO: %s", auth0_user_info)
+            _LOGGER.info("DEBUG AUTH0_USER_INFO: %s", auth0_user_info)
 
             if not member_id:
                 errors["base"] = "invalid_token"
@@ -272,7 +272,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     errors=errors,
                 )
 
-            _LOGGER.error("DEBUG USER_INFO: %s", user_info)
+            _LOGGER.info("DEBUG USER_INFO: %s", user_info)
 
             # アカウント配下の家電一覧を取得してコンテキストに保持
             appliances = user_info.get("myAppliances", [])

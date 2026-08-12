@@ -21,9 +21,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     appliances = entry.data.get("appliances", [])
     _LOGGER.info("[DEBUG_LOG] appliances in entry.data: %s", appliances)    
 
+    # 家電がなくてもセットアップを継続する
     if not appliances:
-        _LOGGER.error("No appliances found in config entry")
-        return False
+        _LOGGER.warning("No appliances found in config entry, but continuing setup.")
 
     # 単一の API インスタンスを生成して全体で共有（トークン不整合の防止）
     api = PanasonicAPI(
