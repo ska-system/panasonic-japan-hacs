@@ -118,13 +118,18 @@ class PanasonicPushHandler:
             )
             _LOGGER.info("Push term registered: %s", term_id)
 
-        # Link the push term to the specific fridge device
-        appliance_id: str = self.config_entry.data.get("appliance_id", "")
-        if appliance_id:
-            await self.hass.async_add_executor_job(
-                self.api.link_push_to_device, appliance_id, term_id
-            )
-            _LOGGER.debug("Push term linked to device %s", appliance_id)
+        # Link the push term to all registered appliances
+        appliances: list[dict[str, Any]] = self.config_entry.data.get("appliances", [])
+        for appliance in appliances:
+            appliance_id = appliance.get("appliance_id")
+            if appliance_id:
+                try:
+                    await self.hass.async_add_executor_job(
+                        self.api.link_push_to_device, appliance_id, term_id
+                    )
+                    _LOGGER.debug("Push term linked to device %s", appliance_id)
+                except Exception as err:
+                    _LOGGER.warning("Failed to link push term to device %s: %s", appliance_id, err)
 
         await self._client.start()
         _LOGGER.info("Push notification listener started (term_id=%s)", term_id)

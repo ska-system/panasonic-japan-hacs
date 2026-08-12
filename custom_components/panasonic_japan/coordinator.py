@@ -1,12 +1,12 @@
 """Data update coordinator for Panasonic Japan."""
 from __future__ import annotations
 
-import asyncio
 import logging
 from datetime import timedelta
 
 import requests as requests_lib
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -20,15 +20,18 @@ _LOGGER = logging.getLogger(__name__)
 class PanasonicDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from the Panasonic API."""
 
-    def __init__(self, hass: HomeAssistant, config_entry) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        config_entry: ConfigEntry,
+        appliance_info: dict,
+        api: PanasonicAPI,
+    ) -> None:
         """Initialize."""
-        self.api = PanasonicAPI(
-            access_token=config_entry.data["access_token"],
-            refresh_token=config_entry.data.get("refresh_token"),
-        )
-        self.appliance_id = config_entry.data["appliance_id"]
-        self.product_code = config_entry.data.get("product_code", "Unknown")
-        self.eoj = config_entry.data.get("eoj")
+        self.api = api
+        self.appliance_id = appliance_info["appliance_id"]
+        self.product_code = appliance_info.get("product_code", "Unknown")
+        self.eoj = appliance_info.get("eoj")
         self.config_entry = config_entry
         self.hass = hass
 
@@ -43,7 +46,7 @@ class PanasonicDataUpdateCoordinator(DataUpdateCoordinator):
         super().__init__(
             hass,
             _LOGGER,
-            name=DOMAIN,
+            name=f"{DOMAIN}_{self.appliance_id}",
             update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
         )
 

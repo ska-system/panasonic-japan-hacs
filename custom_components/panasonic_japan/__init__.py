@@ -1,86 +1,94 @@
-"""The Panasonic Japan Kitchen Appliances integration."""
+"""Panasonic Japan integration setup."""
 from __future__ import annotations
 
 import logging
-
-from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
+from homeassistant.components.http import StaticPathConfig
+from homeassistant.const import CONF_ACCESS_TOKEN
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import device_registry as dr
 
-from .const import DOMAIN
+from .const import DOMAIN, PLATFORMS, _PUSH_KEY, EOJ_NAME_MAP
 from .coordinator import PanasonicDataUpdateCoordinator
+from .api import PanasonicAPI
 from .push import PanasonicPushHandler
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [
-    Platform.SENSOR, 
-    Platform.SWITCH, 
-    Platform.SELECT,
-    Platform.NUMBER,
-    Platform.BUTTON,
-]
-
-_PUSH_KEY = f"{DOMAIN}_push"
-
-# EOJごとの種別名称マッピング
-EOJ_NAME_MAP = {
-    "03B7": "Fridge",
-}
-
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Panasonic Japan from a config entry."""
-    coordinator = PanasonicDataUpdateCoordinator(hass, entry)
+    appliances = entry.data.get("appliances", [])
+    if not appliances:
+        _LOGGER.error("No appliances found in config entry")
+        return False
 
-    # Start push notification listener (non-blocking; failure is logged, not fatal)
-    push_handler = PanasonicPushHandler(hass, coordinator.api, entry)
+    # 単一の API インスタンスを生成して全体で共有（トークン不整合の防止）
+    api = PanasonicAPI(
+        access_token=entry.data.get(CONF_ACCESS_TOKEN),
+        refresh_token=entry.data.get("refresh_token"),
+    )
+    
+    push_handler = PanasonicPushHandler(hass, api, entry)
     hass.data.setdefault(_PUSH_KEY, {})[entry.entry_id] = push_handler
+    
     await push_handler.async_start()
 
-    # term_id が確保された状態でコーディネータの初回リフレッシュを実行する
-    await coordinator.async_config_entry_first_refresh()
+    coordinators: dict[str, PanasonicDataUpdateCoordinator] = {}
+    device_reg = dr.async_get(hass)
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+    for appliance_info in appliances:
+        appliance_id = appliance_info.get("appliance_id")
+        if not appliance_id:
+            continue
 
-    # デバイスレジストリへデバイスとして登録する
-    device_registry = dr.async_get(hass)
-    if coordinator.appliance_id:
+        coordinator = PanasonicDataUpdateCoordinator(hass, entry, appliance_info, api)
+        await coordinator.async_config_entry_first_refresh()
+        coordinators[appliance_id] = coordinator
+
         eoj_upper = (coordinator.eoj or "").upper()
         device_type_name = EOJ_NAME_MAP.get(eoj_upper, "Appliance")
         device_name = f"Panasonic {device_type_name} ({coordinator.product_code})"
 
-        device_registry.async_get_or_create(
+        device_reg.async_get_or_create(
             config_entry_id=entry.entry_id,
-            identifiers={(DOMAIN, coordinator.appliance_id)},
+            identifiers={(DOMAIN, appliance_id)},
             manufacturer="Panasonic",
             name=device_name,
             model=coordinator.product_code,
         )
 
-    # 冷蔵庫（EOJ: 03B7）固有のサービス登録
-    if (coordinator.eoj or "").upper() == "03B7":
-        async def handle_set_cooloven(call: ServiceCall):
-            mode = call.data.get("mode")
-            time_min = call.data.get("time", 0)
-            time_sec = call.data.get("second", 0)
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinators
 
-            payload = {
-                "cooloven_mode": mode,
-            }
-            if mode != "off":
-                payload["cooloven_time"] = int(time_min)
-                payload["cooloven_second"] = int(time_sec)
+    async def handle_set_cooloven(call: ServiceCall):
+        """Handle cooloven service call dynamically for target devices."""
+        mode = call.data.get("mode")
+        time_min = call.data.get("time", 0)
+        time_sec = call.data.get("second", 0)
 
+        payload = {"cooloven_mode": mode}
+        if mode != "off":
+            payload["cooloven_time"] = int(time_min or 0)
+            payload["cooloven_second"] = int(time_sec or 0)
+
+        # 全 ConfigEntry の Coordinators を動的に走査して対象機器を取得
+        all_entries = hass.data.get(DOMAIN, {})
+        target_coordinators = [
+            coord
+            for entry_coords in all_entries.values()
+            for coord in entry_coords.values()
+            if (coord.eoj or "").upper() == "03B7"
+        ]
+
+        for target_coord in target_coordinators:
             await hass.async_add_executor_job(
-                coordinator.api.control_device, 
-                coordinator.appliance_id, 
-                payload
+                target_coord.api.control_device,
+                target_coord.appliance_id,
+                payload,
             )
-            await coordinator.async_request_refresh()
+            await target_coord.async_request_refresh()
 
+    if any((c.eoj or "").upper() == "03B7" for c in coordinators.values()):
         hass.services.async_register(DOMAIN, "set_cooloven", handle_set_cooloven)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -98,8 +106,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ),
     ])
 
-    await _async_register_lovelace_resource(hass)
-
     return True
 
 
@@ -107,12 +113,15 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
-        push_handler: PanasonicPushHandler = hass.data.get(_PUSH_KEY, {}).pop(
-            entry.entry_id, None
-        )
+        hass.data[DOMAIN].pop(entry.entry_id, None)
+        
+        push_handler: PanasonicPushHandler | None = hass.data[_PUSH_KEY].pop(entry.entry_id, None)
         if push_handler:
             await push_handler.async_stop()
+
+        # 全アカウントの設定が削除された場合のみサービスを解除
+        if not hass.data[DOMAIN] and hass.services.has_service(DOMAIN, "set_cooloven"):
+            hass.services.async_remove(DOMAIN, "set_cooloven")
 
     return unload_ok
 

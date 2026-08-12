@@ -60,3 +60,22 @@ EVENT_COOLOVEN_COMPLETED = f"{DOMAIN}_cooloven_completed_event"
 EVENT_COOLOVEN_CANCELED  = f"{DOMAIN}_cooloven_canceled_event"
 EVENT_COOLOVEN_CHANGED   = f"{DOMAIN}_cooloven_changed_event"
 EVENT_PUSH           = f"{DOMAIN}_push_event"
+
+from homeassistant.const import Platform
+
+# サポートするプラットフォーム定義
+PLATFORMS: list[Platform] = [
+    Platform.SENSOR,
+    Platform.SWITCH,
+    Platform.SELECT,
+    Platform.NUMBER,
+    Platform.BUTTON,
+]
+
+# Pushハンドラー格納用のデータキー
+_PUSH_KEY = f"{DOMAIN}_push"
+
+# EOJごとの種別名称マッピング
+EOJ_NAME_MAP = {
+    "03B7": "Fridge",
+}

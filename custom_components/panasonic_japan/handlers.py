@@ -26,13 +26,14 @@ class RefrigeratorHandler(BaseApplianceHandler):
     """冷蔵庫（EOJ: 03B7）専用のAPIハンドラー"""
 
     async def fetch_all_data(self, appliance_id: str, push_term_id: str = "") -> dict[str, Any]:
-        # 冷蔵庫に必要な全APIを非同期で並列取得
-        device_status, device_settings, electricity_data, notification_settings = await asyncio.gather(
-            asyncio.to_thread(self.api.get_device_status, appliance_id),
-            asyncio.to_thread(self.api.get_device_settings, appliance_id),
-            asyncio.to_thread(self.api.get_electricity_reduction, appliance_id),
-            asyncio.to_thread(self.api.get_notification_settings, appliance_id, push_term_id),
+        # 同一の requests.Session に対するスレッド競合を防ぐため順次実行
+        device_status = await asyncio.to_thread(self.api.get_device_status, appliance_id)
+        device_settings = await asyncio.to_thread(self.api.get_device_settings, appliance_id)
+        electricity_data = await asyncio.to_thread(self.api.get_electricity_reduction, appliance_id)
+        notification_settings = await asyncio.to_thread(
+            self.api.get_notification_settings, appliance_id, push_term_id
         )
+
         device_status.update(device_settings)
         return {
             "device_status": device_status,
