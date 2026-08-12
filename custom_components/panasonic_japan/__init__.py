@@ -31,13 +31,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         refresh_token=entry.data.get("refresh_token"),
     )
     
-    push_handler = PanasonicPushHandler(hass, api, entry)
-    hass.data.setdefault(_PUSH_KEY, {})[entry.entry_id] = push_handler
-    
-    await push_handler.async_start()
+    # 修正ポイント: 家電がある場合のみ PushHandler を初期化・起動する
+    if appliances:
+        push_handler = PanasonicPushHandler(hass, api, entry)
+        hass.data.setdefault(_PUSH_KEY, {})[entry.entry_id] = push_handler
+        await push_handler.async_start()
 
     coordinators: dict[str, PanasonicDataUpdateCoordinator] = {}
     device_reg = dr.async_get(hass)
+
+    # アカウント（entry_id）ごとの辞書領域を確実に初期化
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][entry.entry_id] = {}
 
     for appliance_info in appliances:
         # info ディクショナリから必要な値を抽出・補完する
@@ -59,6 +64,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         coordinator = PanasonicDataUpdateCoordinator(hass, entry, appliance_info, api)
         await coordinator.async_config_entry_first_refresh()
+        
+        # ループ内で各デバイスを entry_id 配下の辞書に直接登録
+        hass.data[DOMAIN][entry.entry_id][appliance_id] = coordinator
         coordinators[appliance_id] = coordinator
 
         eoj_upper = (coordinator.eoj or appliance_info.get("eoj", "")).upper()
@@ -74,8 +82,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             name=device_name,
             model=resolved_product_code,
         )
-        
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinators
 
     async def handle_set_cooloven(call: ServiceCall):
         """Handle cooloven service call dynamically for target devices."""
@@ -106,7 +112,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             await target_coord.async_request_refresh()
 
     if any((c.eoj or "").upper() == "03B7" for c in coordinators.values()):
-        hass.services.async_register(DOMAIN, "set_cooloven", handle_set_cooloven)
+        # サービスの二重登録を防ぐガードを追加
+        if not hass.services.has_service(DOMAIN, "set_cooloven"):
+            hass.services.async_register(DOMAIN, "set_cooloven", handle_set_cooloven)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -130,15 +138,21 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id, None)
+        # 該当エントリのデータ削除と、全アカウント削除時のサービス解除処理
+        if DOMAIN in hass.data:
+            hass.data[DOMAIN].pop(entry.entry_id, None)
+            if not hass.data[DOMAIN]:
+                hass.data.pop(DOMAIN, None)
+                if hass.services.has_service(DOMAIN, "set_cooloven"):
+                    hass.services.async_remove(DOMAIN, "set_cooloven")
         
-        push_handler: PanasonicPushHandler | None = hass.data[_PUSH_KEY].pop(entry.entry_id, None)
-        if push_handler:
-            await push_handler.async_stop()
-
-        # 全アカウントの設定が削除された場合のみサービスを解除
-        if not hass.data[DOMAIN] and hass.services.has_service(DOMAIN, "set_cooloven"):
-            hass.services.async_remove(DOMAIN, "set_cooloven")
+        # PushHandler の停止と削除の整理
+        if _PUSH_KEY in hass.data:
+            push_handler: PanasonicPushHandler | None = hass.data[_PUSH_KEY].pop(entry.entry_id, None)
+            if push_handler:
+                await push_handler.async_stop()
+            if not hass.data[_PUSH_KEY]:
+                hass.data.pop(_PUSH_KEY, None)
 
     return unload_ok
 
