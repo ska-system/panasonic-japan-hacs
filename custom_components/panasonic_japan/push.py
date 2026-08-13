@@ -121,7 +121,10 @@ class PanasonicPushHandler:
         # Link the push term to all registered appliances
         appliances: list[dict[str, Any]] = self.config_entry.data.get("appliances", [])
         for appliance in appliances:
-            appliance_id = appliance.get("appliance_id")
+            # 修正: info 辞書からの抽出を試み、なければ appliance_id を参照する
+            info = appliance.get("info", {})
+            appliance_id = info.get("applianceId") or appliance.get("appliance_id")
+
             if appliance_id:
                 try:
                     await self.hass.async_add_executor_job(
