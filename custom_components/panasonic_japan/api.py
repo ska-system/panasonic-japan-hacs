@@ -263,7 +263,7 @@ class PanasonicAPI:
 
         headers = {
             "Content-Type": "application/x-www-form-urlencoded",
-            "User-Agent": "KitchenPocketA/5.4.1",
+            "User-Agent": USER_AGENT,
         }
 
         data = {
