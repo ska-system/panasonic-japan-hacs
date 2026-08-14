@@ -56,6 +56,23 @@ class PanasonicPushHandler:
     async def async_start(self) -> None:
         """Register with FCM and start listening for push messages."""
         try:
+            import firebase_messaging.fcmpushclient
+            
+            # crypto_keyのパディング不足エラー（Incorrect padding）をピンポイントで修正するモンキーパッチ
+            if not getattr(firebase_messaging.fcmpushclient.FcmPushClient, "_panasonic_patched", False):
+                _original_decrypt = firebase_messaging.fcmpushclient.FcmPushClient._decrypt_raw_data
+
+                @staticmethod
+                def _patched_decrypt(credentials, crypto_key_str, salt, raw_data):
+                    if isinstance(crypto_key_str, str):
+                        padding_needed = len(crypto_key_str) % 4
+                        if padding_needed:
+                            crypto_key_str += "=" * (4 - padding_needed)
+                    return _original_decrypt(credentials, crypto_key_str, salt, raw_data)
+
+                firebase_messaging.fcmpushclient.FcmPushClient._decrypt_raw_data = _patched_decrypt
+                firebase_messaging.fcmpushclient.FcmPushClient._panasonic_patched = True
+
             from firebase_messaging import FcmPushClient, FcmRegisterConfig
         except ImportError:
             _LOGGER.error(
@@ -121,7 +138,6 @@ class PanasonicPushHandler:
         # Link the push term to all registered appliances
         appliances: list[dict[str, Any]] = self.config_entry.data.get("appliances", [])
         for appliance in appliances:
-            # 修正: info 辞書からの抽出を試み、なければ appliance_id を参照する
             info = appliance.get("info", {})
             appliance_id = info.get("applianceId") or appliance.get("appliance_id")
 
