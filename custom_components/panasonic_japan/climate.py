@@ -58,7 +58,7 @@ class PanasonicClimate(CoordinatorEntity[PanasonicDataUpdateCoordinator], Climat
     _attr_supported_features = (
         ClimateEntityFeature.PRESET_MODE
     )
-    _attr_hvac_modes = [HVACMode.COOL, HVACMode.OFF]
+    _attr_hvac_modes = [HVACMode.AUTO]
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_preset_modes = ["normal", "highLoading"]
 
@@ -73,10 +73,10 @@ class PanasonicClimate(CoordinatorEntity[PanasonicDataUpdateCoordinator], Climat
             model=coordinator.product_code,
         )
 
-    @property
-    def hvac_mode(self) -> HVACMode:
-        """Return the current operation mode."""
-        return HVACMode.COOL
+    # @property
+    # def hvac_mode(self) -> HVACMode:
+    #     """Return the current operation mode."""
+    #     return HVACMode.AUTO
 
     @property
     def preset_mode(self) -> str | None:
@@ -93,9 +93,9 @@ class PanasonicClimate(CoordinatorEntity[PanasonicDataUpdateCoordinator], Climat
     #     """Return target temperature."""
     #     return self.coordinator.data.get("device_status", {}).get("target_temp", DEFAULT_TEMPERATURE)
 
-    async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
-        """Set new target hvac mode."""
-        await self.coordinator.async_request_refresh()
+    # async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
+    #     """Set new target hvac mode."""
+    #     await self.coordinator.async_request_refresh()
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new preset mode."""
