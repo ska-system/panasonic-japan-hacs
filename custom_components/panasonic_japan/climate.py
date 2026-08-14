@@ -59,7 +59,7 @@ class PanasonicClimate(CoordinatorEntity[PanasonicDataUpdateCoordinator], Climat
         ClimateEntityFeature.PRESET_MODE
     )
     _attr_hvac_modes = [HVACMode.COOL, HVACMode.OFF]
-    _attr_temperature_unit = UnitOfTemperature.CELSIUS
+    # _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_preset_modes = ["normal", "highLoading"]
 
     def __init__(self, coordinator: PanasonicDataUpdateCoordinator) -> None:
@@ -83,15 +83,15 @@ class PanasonicClimate(CoordinatorEntity[PanasonicDataUpdateCoordinator], Climat
         """Return the current preset mode."""
         return self.coordinator.data.get("device_status", {}).get("operation_mode")
 
-    @property
-    def current_temperature(self) -> float | None:
-        """Return current temperature."""
-        return self.coordinator.data.get("device_status", {}).get("current_temp", DEFAULT_TEMPERATURE)
+    # @property
+    # def current_temperature(self) -> float | None:
+    #     """Return current temperature."""
+    #     return self.coordinator.data.get("device_status", {}).get("current_temp", DEFAULT_TEMPERATURE)
 
-    @property
-    def target_temperature(self) -> float | None:
-        """Return target temperature."""
-        return self.coordinator.data.get("device_status", {}).get("target_temp", DEFAULT_TEMPERATURE)
+    # @property
+    # def target_temperature(self) -> float | None:
+    #     """Return target temperature."""
+    #     return self.coordinator.data.get("device_status", {}).get("target_temp", DEFAULT_TEMPERATURE)
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new target hvac mode."""
@@ -106,15 +106,15 @@ class PanasonicClimate(CoordinatorEntity[PanasonicDataUpdateCoordinator], Climat
         )
         await self.coordinator.async_request_refresh()
 
-    async def async_set_temperature(self, **kwargs: Any) -> None:
-        """Set new target temperature."""
-        temp = kwargs.get("temperature")
-        await self.hass.async_add_executor_job(
-            self.coordinator.api.control_device,
-            self.coordinator.appliance_id,
-            {"temperature": temp},
-        )
-        await self.coordinator.async_request_refresh()
+    # async def async_set_temperature(self, **kwargs: Any) -> None:
+    #     """Set new target temperature."""
+    #     temp = kwargs.get("temperature")
+    #     await self.hass.async_add_executor_job(
+    #         self.coordinator.api.control_device,
+    #         self.coordinator.appliance_id,
+    #         {"temperature": temp},
+    #     )
+    #     await self.coordinator.async_request_refresh()
 
     async def async_cooling_assist(self, mode: str, duration: int) -> None:
         """Execute cooling assist with mode and duration parameters."""
