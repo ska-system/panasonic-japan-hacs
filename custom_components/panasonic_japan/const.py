@@ -70,6 +70,7 @@ PLATFORMS: list[Platform] = [
     Platform.SELECT,
     Platform.NUMBER,
     Platform.BUTTON,
+    Platform.CLIMATE,
 ]
 
 # Pushハンドラー格納用のデータキー
