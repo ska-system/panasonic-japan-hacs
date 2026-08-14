@@ -73,10 +73,11 @@ class PanasonicClimate(CoordinatorEntity[PanasonicDataUpdateCoordinator], Climat
             model=coordinator.product_code,
         )
 
-    # @property
-    # def hvac_mode(self) -> HVACMode:
-    #     """Return the current operation mode."""
-    #     return HVACMode.AUTO
+    @property
+    def hvac_mode(self) -> HVACMode:
+        """Return the current operation mode."""
+        return self.coordinator.data.get("device_status", {}).get("operation_mode")
+        # return HVACMode.AUTO
 
     @property
     def preset_mode(self) -> str | None:
