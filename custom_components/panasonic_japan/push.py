@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import logging
 import uuid
-import base64
 from typing import Any
 
 from homeassistant.core import HomeAssistant
@@ -57,6 +56,23 @@ class PanasonicPushHandler:
     async def async_start(self) -> None:
         """Register with FCM and start listening for push messages."""
         try:
+            import firebase_messaging.fcmpushclient
+            
+            # crypto_keyのパディング不足エラー（Incorrect padding）をピンポイントで修正するモンキーパッチ
+            if not getattr(firebase_messaging.fcmpushclient.FcmPushClient, "_panasonic_patched", False):
+                _original_decrypt = firebase_messaging.fcmpushclient.FcmPushClient._decrypt_raw_data
+
+                @staticmethod
+                def _patched_decrypt(credentials, crypto_key_str, salt, raw_data):
+                    if isinstance(crypto_key_str, str):
+                        padding_needed = len(crypto_key_str) % 4
+                        if padding_needed:
+                            crypto_key_str += "=" * (4 - padding_needed)
+                    return _original_decrypt(credentials, crypto_key_str, salt, raw_data)
+
+                firebase_messaging.fcmpushclient.FcmPushClient._decrypt_raw_data = _patched_decrypt
+                firebase_messaging.fcmpushclient.FcmPushClient._panasonic_patched = True
+
             from firebase_messaging import FcmPushClient, FcmRegisterConfig
         except ImportError:
             _LOGGER.error(
