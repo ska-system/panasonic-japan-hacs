@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+import base64
 from typing import Any
 
 from homeassistant.core import HomeAssistant
@@ -56,6 +57,19 @@ class PanasonicPushHandler:
     async def async_start(self) -> None:
         """Register with FCM and start listening for push messages."""
         try:
+            # Base64のパディング不足（Incorrect padding）を動的に修正するモンキーパッチ
+            if not getattr(base64, "_panasonic_patched", False):
+                _original_urlsafe_b64decode = base64.urlsafe_b64decode
+                def _safe_urlsafe_b64decode(s):
+                    if isinstance(s, str):
+                        s = s.encode("ascii")
+                    elif not isinstance(s, bytes):
+                        s = str(s).encode("ascii")
+                    s += b"=" * (-len(s) % 4)
+                    return _original_urlsafe_b64decode(s)
+                base64.urlsafe_b64decode = _safe_urlsafe_b64decode
+                base64._panasonic_patched = True
+
             from firebase_messaging import FcmPushClient, FcmRegisterConfig
         except ImportError:
             _LOGGER.error(
@@ -121,7 +135,6 @@ class PanasonicPushHandler:
         # Link the push term to all registered appliances
         appliances: list[dict[str, Any]] = self.config_entry.data.get("appliances", [])
         for appliance in appliances:
-            # 修正: info 辞書からの抽出を試み、なければ appliance_id を参照する
             info = appliance.get("info", {})
             appliance_id = info.get("applianceId") or appliance.get("appliance_id")
 
