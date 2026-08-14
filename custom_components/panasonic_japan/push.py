@@ -58,17 +58,21 @@ class PanasonicPushHandler:
         try:
             import firebase_messaging.fcmpushclient
             
-            # crypto_keyのパディング不足エラー（Incorrect padding）をピンポイントで修正するモンキーパッチ
+            # crypto_keyのパディング補正および不正なECキーエラーを安全にハンドリングするモンキーパッチ
             if not getattr(firebase_messaging.fcmpushclient.FcmPushClient, "_panasonic_patched", False):
                 _original_decrypt = firebase_messaging.fcmpushclient.FcmPushClient._decrypt_raw_data
 
                 @staticmethod
                 def _patched_decrypt(credentials, crypto_key_str, salt, raw_data):
-                    if isinstance(crypto_key_str, str):
-                        padding_needed = len(crypto_key_str) % 4
-                        if padding_needed:
-                            crypto_key_str += "=" * (4 - padding_needed)
-                    return _original_decrypt(credentials, crypto_key_str, salt, raw_data)
+                    try:
+                        if isinstance(crypto_key_str, str):
+                            padding_needed = len(crypto_key_str) % 4
+                            if padding_needed:
+                                crypto_key_str += "=" * (4 - padding_needed)
+                        return _original_decrypt(credentials, crypto_key_str, salt, raw_data)
+                    except Exception as err:
+                        _LOGGER.debug("Decryption skipped due to invalid EC key or payload format: %s", err)
+                        return raw_data
 
                 firebase_messaging.fcmpushclient.FcmPushClient._decrypt_raw_data = _patched_decrypt
                 firebase_messaging.fcmpushclient.FcmPushClient._panasonic_patched = True
