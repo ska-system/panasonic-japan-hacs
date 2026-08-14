@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 from homeassistant.components.climate import ClimateEntity, ClimateEntityFeature, HVACMode
+from homeassistant.const import UnitOfTemperature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
@@ -12,6 +13,9 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import PanasonicDataUpdateCoordinator
+
+# 温度が取得できない場合のデフォルト参考温度
+DEFAULT_TEMPERATURE = 4.0
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -36,6 +40,7 @@ class PanasonicClimate(CoordinatorEntity[PanasonicDataUpdateCoordinator], Climat
     _attr_name = None
     _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
     _attr_hvac_modes = [HVACMode.COOL, HVACMode.OFF]
+    _attr_temperature_unit = UnitOfTemperature.CELSIUS
 
     def __init__(self, coordinator: PanasonicDataUpdateCoordinator) -> None:
         """Initialize the climate entity."""
