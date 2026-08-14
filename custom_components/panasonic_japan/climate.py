@@ -59,7 +59,7 @@ class PanasonicClimate(CoordinatorEntity[PanasonicDataUpdateCoordinator], Climat
         ClimateEntityFeature.PRESET_MODE
     )
     _attr_hvac_modes = [HVACMode.COOL, HVACMode.OFF]
-    # _attr_temperature_unit = UnitOfTemperature.CELSIUS
+    _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_preset_modes = ["normal", "highLoading"]
 
     def __init__(self, coordinator: PanasonicDataUpdateCoordinator) -> None:
