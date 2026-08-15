@@ -4,8 +4,8 @@ from __future__ import annotations
 import logging
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -16,14 +16,23 @@ from .coordinator import PanasonicDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the button platform."""
-    coordinator: PanasonicDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([CoolingAssistButton(coordinator)])
+    coordinators: dict[str, PanasonicDataUpdateCoordinator] = hass.data[DOMAIN][entry.entry_id]
+
+    entities = []
+    for coordinator in coordinators.values():
+        # 冷蔵庫（EOJ: 03B7）の場合のみクーリングアシストボタンを生成
+        if (coordinator.eoj or "").upper() == "03B7":
+            entities.append(CoolingAssistButton(coordinator))
+
+    async_add_entities(entities)
+
 
 class CoolingAssistButton(CoordinatorEntity[PanasonicDataUpdateCoordinator], ButtonEntity):
     """Representation of the Cooling Assist trigger button."""
@@ -112,6 +121,7 @@ class CoolingAssistButton(CoordinatorEntity[PanasonicDataUpdateCoordinator], But
 
         service_data = {
             "mode": mode,
+            "appliance_id": self.coordinator.appliance_id,
         }
         if mode != "off":
             service_data["time"] = time_int

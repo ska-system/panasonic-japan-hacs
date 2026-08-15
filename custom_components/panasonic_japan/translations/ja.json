@@ -3,7 +3,7 @@
     "step": {
       "reconfigure_callback": {
         "title": "Panasonic Japan の再認証",
-        "description": "Panasonic アカウントを再認証してアクセストークンを更新します。\n\n**手順 1:** 以下のログイン URL をクリックして、ブラウザでログインページを開いてください:\n\n**ログイン URL:**\n`{login_url}`\n\n**手順 2:** ログイン後、リダイレクト先のコールバック URL 全体をコピーし、以下に貼り付けてください。",
+        "description": "Panasonic アカウントを再認証してアクセストークンを更新します。\n\n**手順 1:** [ログインページ]({login_url}) をクリックするか、以下の URL をコピーしてブラウザで開いてください:\n\n**ログイン URL:**\n`{login_url}`\n\n**手順 2:** ログイン後、リダイレクト先のコールバック URL 全体をコピーし、以下に貼り付けてください。",
         "data": {
           "callback_url": "コールバック URL"
         },
@@ -13,12 +13,22 @@
       },
       "callback": {
         "title": "Panasonic Japan 認証",
-        "description": "**手順 1:** 以下のログイン URL をクリックして、ブラウザでログインページを開いてください(ページが開かない場合は、auth.digital.panasonic.comのcookieを削除してください。):\n\n**ログイン URL:**\n`{login_url}`\n\n**手順 2:** Panasonic アカウントでログインすると、コールバック URL にリダイレクトされます。(リダイレクトされない場合は、F12で開発者ツールを開き、エラーになっているURLをコピーして下さい。)\n\n**手順 3:** コールバック URL 全体をコピーし（例: `com.panasonic.jp.kitchenpocket.auth0://...`）、以下のフィールドに貼り付けてください。",
+        "description": "**手順 1:**  [ログインページ]({login_url}) をクリックするか、以下の URL をコピーしてブラウザで開いてください。\n\n**ログイン URL:**\n`{login_url}`\n\n**手順 2:** Panasonic アカウントでログインすると、コールバック URL にリダイレクトされます。(リダイレクトされない場合は、F12で開発者ツールを開き、エラーになっているURLをコピーして下さい。)\n\n**手順 3:** コールバック URL 全体をコピーし（例: `com.panasonic.jp.kitchenpocket.auth0://...`）、以下のフィールドに貼り付けてください。",
         "data": {
           "callback_url": "コールバック URL"
         },
         "data_description": {
           "callback_url": "ログイン後に取得したコールバック URL 全体を貼り付けてください"
+        }
+      },
+      "identifier": {
+        "title": "アカウント名の設定",
+        "description": "複数アカウントを管理するため、この CLUB Panasonic アカウントを識別する任意の名前（例: メインアカウント、自宅など）を入力してください。",
+        "data": {
+          "identifier": "アカウント識別名"
+        },
+        "data_description": {
+          "identifier": "アカウントを区別するための分かりやすい名前を入力してください"
         }
       }
     },
@@ -32,10 +42,24 @@
       "unknown": "予期しないエラーが発生しました"
       },
     "abort": {
-      "already_configured": "このデバイスは既に設定済みです"
+      "already_configured": "このアカウントは既に設定済みです"
     }
   },
   "entity": {
+    "climate": {
+      "panasonic_fridge": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "off": "オフ",
+              "quench": "冷ます",
+              "cold": "急冷",
+              "frozen": "急凍"
+            }
+          }
+        }
+      }
+    },
     "select": {
       "partial_mode": {
         "name": "パーシャル/チルド切替",

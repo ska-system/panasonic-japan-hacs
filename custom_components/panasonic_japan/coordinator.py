@@ -1,17 +1,18 @@
 """Data update coordinator for Panasonic Japan."""
 from __future__ import annotations
 
-import asyncio
 import logging
 from datetime import timedelta
 
 import requests as requests_lib
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import PanasonicAPI, PanasonicAPIError
 from .const import DEFAULT_SCAN_INTERVAL, DOMAIN
+from .handlers import APIHandlerFactory
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -19,16 +20,23 @@ _LOGGER = logging.getLogger(__name__)
 class PanasonicDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from the Panasonic API."""
 
-    def __init__(self, hass: HomeAssistant, config_entry) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        config_entry: ConfigEntry,
+        appliance_info: dict,
+        api: PanasonicAPI,
+    ) -> None:
         """Initialize."""
-        self.api = PanasonicAPI(
-            access_token=config_entry.data["access_token"],
-            refresh_token=config_entry.data.get("refresh_token"),
-        )
-        self.appliance_id = config_entry.data["appliance_id"]
-        self.product_code = config_entry.data.get("product_code", "Unknown")
+        self.api = api
+        self.appliance_id = appliance_info["appliance_id"]
+        self.product_code = appliance_info.get("product_code", "Unknown")
+        self.eoj = appliance_info.get("eoj")
         self.config_entry = config_entry
         self.hass = hass
+
+        # eoj に基づいて対応するハンドラーを保持
+        self.handler = APIHandlerFactory.create(self.eoj, self.api)
 
         # クーリングアシストの設定値を一時的に保持するキャッシュ変数
         self.pending_cooloven_mode = "quench"
@@ -38,7 +46,7 @@ class PanasonicDataUpdateCoordinator(DataUpdateCoordinator):
         super().__init__(
             hass,
             _LOGGER,
-            name=DOMAIN,
+            name=f"{DOMAIN}_{self.appliance_id}",
             update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
         )
 
@@ -76,29 +84,19 @@ class PanasonicDataUpdateCoordinator(DataUpdateCoordinator):
         return True
 
     async def _fetch_all(self) -> dict:
-        """Fetch all device data from the API."""
-        device_status, device_settings, electricity_data, notification_settings = await asyncio.gather(
-            self.hass.async_add_executor_job(
-                self.api.get_device_status, self.appliance_id
-            ),
-            self.hass.async_add_executor_job(
-                self.api.get_device_settings, self.appliance_id
-            ),
-            self.hass.async_add_executor_job(
-                self.api.get_electricity_reduction, self.appliance_id
-            ),
-            self.hass.async_add_executor_job(
-                self.api.get_notification_settings, self.appliance_id, self.config_entry.data.get("push_term_id", "")
-            ),
-        )
-        device_status.update(device_settings)
-        return {
-            "device_status": device_status,
-            "notification_settings": notification_settings,  # 正しく変数を渡す
-            "electricity": electricity_data,
+        """Fetch all device data from the API via handler."""
+        push_term_id = self.config_entry.data.get("push_term_id", "")
+        
+        # 家電ごとのデータ取得処理をすべてハンドラーに委任
+        data = await self.handler.fetch_all_data(self.appliance_id, push_term_id)
+        
+        # メタデータを付与して返却
+        data.update({
             "appliance_id": self.appliance_id,
             "product_code": self.product_code,
-        }
+            "eoj": self.eoj,
+        })
+        return data
 
     async def _async_update_data(self) -> dict:
         """Fetch data from Panasonic API."""

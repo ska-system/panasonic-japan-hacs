@@ -13,6 +13,7 @@ import requests
 from .const import (
     API_BASE_URL,
     API_KEY,
+    USER_AGENT,
     AUTH0_AUDIENCE,
     AUTH0_CLIENT_ID,
     AUTH0_DOMAIN,
@@ -69,7 +70,7 @@ class PanasonicAPI:
             "Content-Type": "application/json; charset=UTF-8",
             "Accept": "application/json",
             "X-API-Key": API_KEY,
-            "User-Agent": "KitchenPocketA/5.4.1",
+            "User-Agent": USER_AGENT,
         }
 
         if include_reizo_date:
@@ -97,12 +98,20 @@ class PanasonicAPI:
 
         return response
 
+    def get_auth0_user_info(self) -> dict[str, Any]:
+        """Get Auth0 user info including app_metadata and member_user_id."""
+        url = f"https://{AUTH0_DOMAIN}/userinfo"
+        headers = self._get_headers()
+        response = self._make_request("GET", url, headers=headers, timeout=30)
+        response.raise_for_status()
+        return response.json()
+
     def get_user_info(self) -> dict[str, Any]:
         """Get user information and list of appliances."""
         url = f"{KAPF_API_BASE_URL}/user/info"
         headers = self._get_headers(include_reizo_date=False)
         headers["X-API-Key"] = API_KEY
-        headers["User-Agent"] = "KitchenPocketA/5.4.1"
+        headers["User-Agent"] = USER_AGENT
 
         response = self._make_request("GET", url, headers=headers, timeout=30)
         response.raise_for_status()
@@ -209,7 +218,7 @@ class PanasonicAPI:
         url = f"{KAPF_API_BASE_URL}/push/new-term"
         headers = self._get_headers(include_reizo_date=False)
         headers["X-API-Key"] = API_KEY
-        headers["User-Agent"] = "KitchenPocketA/5.4.1"
+        headers["User-Agent"] = USER_AGENT
 
         data = {
             "smpLocale": "ja",
@@ -254,7 +263,7 @@ class PanasonicAPI:
 
         headers = {
             "Content-Type": "application/x-www-form-urlencoded",
-            "User-Agent": "KitchenPocketA/5.4.1",
+            "User-Agent": USER_AGENT,
         }
 
         data = {

@@ -3,8 +3,8 @@
     "step": {
       "reconfigure_callback": {
         "title": "Re-authenticate Panasonic Japan",
+        "description": "Re-authenticate your Panasonic account to update the access token.\n\n**Step 1:** Click [here to open the login page]({login_url}) or copy the URL below to open it in your browser:\n\n**Login URL:**\n`{login_url}`\n\n**Step 2:** After logging in, copy the entire callback URL and paste it below.",
         "data": {
-          "description": "Re-authenticate your Panasonic account to update the access token.\n\n**Step 1:** Click the login URL below to open the login page in your browser:\n\n**Login URL:**\n`{login_url}`\n\n**Step 2:** After logging in, copy the entire callback URL and paste it below.",
           "callback_url": "Callback URL"
         },
         "data_description": {
@@ -13,12 +13,22 @@
       },
       "callback": {
         "title": "Panasonic Japan Authentication",
-        "description": "**Step 1:** Click the login URL below to open the login page in your browser (if the page does not open, please delete the cookie for auth.digital.panasonic.com):\n\n**Login URL:**\n`{login_url}`\n\n**Step 2:** After logging in with your Panasonic account, you'll be redirected to a callback URL (if not redirected, open developer tools with F12 and copy the failing URL).\n\n**Step 3:** Copy the entire callback URL (it will look like `com.panasonic.jp.kitchenpocket.auth0://auth.digital.panasonic.com/android/com.panasonic.jp.kitchenpocket/callback?code=...&state=...`) and paste it in the field below.",
+        "description": "**Step 1:** Click [here to open the login page]({login_url}) or copy the URL below to open it in your browser (if the page does not open, please delete the cookie for auth.digital.panasonic.com):\n\n**Login URL:**\n`{login_url}`\n\n**Step 2:** After logging in with your Panasonic account, you'll be redirected to a callback URL (if not redirected, open developer tools with F12 and copy the failing URL).\n\n**Step 3:** Copy the entire callback URL (it will look like `com.panasonic.jp.kitchenpocket.auth0://...`) and paste it in the field below.",
         "data": {
           "callback_url": "Callback URL"
         },
         "data_description": {
           "callback_url": "Paste the complete callback URL you received after logging in"
+        }
+      },
+      "identifier": {
+        "title": "Account Identifier",
+        "description": "Enter a name to identify this CLUB Panasonic account for management.",
+        "data": {
+          "identifier": "Identifier"
+        },
+        "data_description": {
+          "identifier": "Enter a name to distinguish this account"
         }
       }
     },
@@ -32,10 +42,24 @@
       "unknown": "Unexpected error occurred"
     },
     "abort": {
-      "already_configured": "This device is already configured"
+      "already_configured": "This account is already configured"
     }
   },
   "entity": {
+    "climate": {
+      "panasonic_fridge": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "off": "Off",
+              "quench": "Quench (Rapid Cooling)",
+              "cold": "Cold (Rapid Cooling)" ,
+              "frozen": "Freeze (Rapid Freezing)"
+            }
+          }
+        }
+      }
+    },
     "select": {
       "partial_mode": {
         "name": "Partial Compartment Mode",

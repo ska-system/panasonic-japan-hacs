@@ -56,6 +56,34 @@ class PanasonicPushHandler:
     async def async_start(self) -> None:
         """Register with FCM and start listening for push messages."""
         try:
+            import firebase_messaging.fcmpushclient
+            
+            # 復号時の引数と鍵の妥当性を検証するデバッグログ付きモンキーパッチ
+            if not getattr(firebase_messaging.fcmpushclient.FcmPushClient, "_panasonic_patched", False):
+                _original_decrypt = firebase_messaging.fcmpushclient.FcmPushClient._decrypt_raw_data
+
+                @staticmethod
+                def _patched_decrypt(credentials, crypto_key_str, salt, raw_data):
+                    _LOGGER.debug(
+                        "FCM decrypt debug: crypto_key_type=%s, crypto_key_val=%s, salt=%s, raw_data_len=%s",
+                        type(crypto_key_str),
+                        crypto_key_str,
+                        salt,
+                        len(raw_data) if raw_data else 0,
+                    )
+                    try:
+                        if isinstance(crypto_key_str, str):
+                            padding_needed = len(crypto_key_str) % 4
+                            if padding_needed:
+                                crypto_key_str += "=" * (4 - padding_needed)
+                        return _original_decrypt(credentials, crypto_key_str, salt, raw_data)
+                    except Exception as err:
+                        _LOGGER.error("Decryption failed with error: %s (crypto_key=%s)", err, crypto_key_str, exc_info=True)
+                        return raw_data
+
+                firebase_messaging.fcmpushclient.FcmPushClient._decrypt_raw_data = _patched_decrypt
+                firebase_messaging.fcmpushclient.FcmPushClient._panasonic_patched = True
+
             from firebase_messaging import FcmPushClient, FcmRegisterConfig
         except ImportError:
             _LOGGER.error(
@@ -118,13 +146,20 @@ class PanasonicPushHandler:
             )
             _LOGGER.info("Push term registered: %s", term_id)
 
-        # Link the push term to the specific fridge device
-        appliance_id: str = self.config_entry.data.get("appliance_id", "")
-        if appliance_id:
-            await self.hass.async_add_executor_job(
-                self.api.link_push_to_device, appliance_id, term_id
-            )
-            _LOGGER.debug("Push term linked to device %s", appliance_id)
+        # Link the push term to all registered appliances
+        appliances: list[dict[str, Any]] = self.config_entry.data.get("appliances", [])
+        for appliance in appliances:
+            info = appliance.get("info", {})
+            appliance_id = info.get("applianceId") or appliance.get("appliance_id")
+
+            if appliance_id:
+                try:
+                    await self.hass.async_add_executor_job(
+                        self.api.link_push_to_device, appliance_id, term_id
+                    )
+                    _LOGGER.debug("Push term linked to device %s", appliance_id)
+                except Exception as err:
+                    _LOGGER.warning("Failed to link push term to device %s: %s", appliance_id, err)
 
         await self._client.start()
         _LOGGER.info("Push notification listener started (term_id=%s)", term_id)

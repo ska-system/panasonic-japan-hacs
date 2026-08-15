@@ -93,16 +93,18 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Panasonic Japan selects from a config entry."""
-    coordinator: PanasonicDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinators: dict[str, PanasonicDataUpdateCoordinator] = hass.data[DOMAIN][entry.entry_id]
 
-    device_status = coordinator.data.get("device_status", {})
     entities = []
-    for description in SELECTS:
-        if description.status_key:
-            if description.status_key in device_status:
-                entities.append(PanasonicSelect(coordinator, description, entry.entry_id))
-        else:
-            entities.append(PanasonicSelect(coordinator, description, entry.entry_id))
+    for coordinator in coordinators.values():
+        if (coordinator.eoj or "").upper() == "03B7":
+            device_status = (coordinator.data or {}).get("device_status", {})
+            for description in SELECTS:
+                if description.status_key:
+                    if description.status_key in device_status:
+                        entities.append(PanasonicSelect(coordinator, description, entry.entry_id))
+                else:
+                    entities.append(PanasonicSelect(coordinator, description, entry.entry_id))
 
     async_add_entities(entities)
 
@@ -147,6 +149,8 @@ class PanasonicSelect(CoordinatorEntity[PanasonicDataUpdateCoordinator], SelectE
     def current_option(self) -> str | None:
         """Return current selected option."""
         if self.entity_description.status_key:
+            if not self.coordinator.data:
+                return None
             return self.coordinator.data.get("device_status", {}).get(
                 self.entity_description.status_key
             )
