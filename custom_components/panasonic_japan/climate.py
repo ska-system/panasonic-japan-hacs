@@ -52,6 +52,7 @@ class PanasonicClimate(CoordinatorEntity[PanasonicDataUpdateCoordinator], Climat
     _attr_has_entity_name = True
     _attr_name = None
     _attr_icon = "mdi:fridge-outline"
+    _attr_translation_key = "panasonic_fridge"
     _attr_supported_features = (
         ClimateEntityFeature.PRESET_MODE
     )

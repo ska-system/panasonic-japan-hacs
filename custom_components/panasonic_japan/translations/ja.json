@@ -47,13 +47,15 @@
   },
   "entity": {
     "climate": {
-      "state_attributes": {
-        "preset_mode": {
-          "state": {
-            "off": "オフ",
-            "quench": "冷ます",
-            "cold": "急冷",
-            "frozen": "急凍"
+      "panasonic_fridge": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "off": "オフ",
+              "quench": "冷ます",
+              "cold": "急冷",
+              "frozen": "急凍"
+            }
           }
         }
       }
