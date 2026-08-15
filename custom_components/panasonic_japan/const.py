@@ -11,6 +11,7 @@ AUTH0_CLIENT_ID = "w7UI3iLByFFz3GOj6Ef6BCHfPczOcsy8"
 AUTH0_AUDIENCE = "https://club.panasonic.jp/w7UI3iLByFFz3GOj6Ef6BCHfPczOcsy8/api/v1/"
 AUTH0_TOKEN_URL = f"https://{AUTH0_DOMAIN}/oauth/token"
 API_KEY = "x6pdB3r5z2eqDCgwf0gF1Ffre7Au7Km3YoFY0fDh"
+USER_AGENT = "KitchenPocketA/5.4.1"
 
 # Status usages values (eUsagesItem enum from Android app)
 USAGES_TOP_SCREEN     = 1   # returns: operation_mode, cooloven_in_seconds, house_sitting, etc.
@@ -59,3 +60,23 @@ EVENT_COOLOVEN_COMPLETED = f"{DOMAIN}_cooloven_completed_event"
 EVENT_COOLOVEN_CANCELED  = f"{DOMAIN}_cooloven_canceled_event"
 EVENT_COOLOVEN_CHANGED   = f"{DOMAIN}_cooloven_changed_event"
 EVENT_PUSH           = f"{DOMAIN}_push_event"
+
+from homeassistant.const import Platform
+
+# サポートするプラットフォーム定義
+PLATFORMS: list[Platform] = [
+    Platform.SENSOR,
+    Platform.SWITCH,
+    Platform.SELECT,
+    Platform.NUMBER,
+    Platform.BUTTON,
+    Platform.CLIMATE,
+]
+
+# Pushハンドラー格納用のデータキー
+_PUSH_KEY = f"{DOMAIN}_push"
+
+# EOJごとの種別名称マッピング
+EOJ_NAME_MAP = {
+    "03B7": "Fridge",
+}

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from homeassistant.components.number import (
@@ -77,12 +77,13 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Panasonic Japan numbers from a config entry."""
-    coordinator: PanasonicDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinators: dict[str, PanasonicDataUpdateCoordinator] = hass.data[DOMAIN][entry.entry_id]
 
-    entities = [
-        PanasonicNumber(coordinator, description, entry.entry_id)
-        for description in NUMBERS
-    ]
+    entities = []
+    for coordinator in coordinators.values():
+        if (coordinator.eoj or "").upper() == "03B7":
+            for description in NUMBERS:
+                entities.append(PanasonicNumber(coordinator, description, entry.entry_id))
 
     async_add_entities(entities)
 
@@ -136,9 +137,7 @@ class PanasonicNumber(CoordinatorEntity[PanasonicDataUpdateCoordinator], NumberE
             return 0
         mode = self._get_current_mode()
         if self.entity_description.key == "cooling_assist_time":
-            if mode == "off":
-                return 0
-            elif mode == "quench":
+            if mode in ("off", "quench"):
                 return 0
             elif mode == "cold":
                 return 10
@@ -181,6 +180,8 @@ class PanasonicNumber(CoordinatorEntity[PanasonicDataUpdateCoordinator], NumberE
     def native_value(self) -> float | None:
         """Return current value."""
         if self.entity_description.key == "notify_door_open_time":
+            if not self.coordinator.data:
+                return 0
             param_list = self.coordinator.data.get("notification_settings", {}).get("param_list", [])
             for item in param_list:
                 if item.get("param_name") == "doorOpenInfo":
@@ -204,6 +205,8 @@ class PanasonicNumber(CoordinatorEntity[PanasonicDataUpdateCoordinator], NumberE
 
         # ドアモニター設定時間の場合は、スイッチの状態を確認してAPIへ反映
         if self.entity_description.key == "notify_door_open_time":
+            if not self.coordinator.data:
+                return
             current_settings = dict(self.coordinator.data.get("notification_settings", {}))
             if "param_list" in current_settings:
                 for item in current_settings["param_list"]:
