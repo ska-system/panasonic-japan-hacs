@@ -60,7 +60,7 @@ class PanasonicClimate(CoordinatorEntity[PanasonicDataUpdateCoordinator], Climat
     )
     _attr_hvac_modes = [HVACMode.AUTO]
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
-    _attr_preset_modes = ["normal", "highLoading"]
+    _attr_preset_modes = ["off", "quench", "cold", "frozen"]
 
     def __init__(self, coordinator: PanasonicDataUpdateCoordinator) -> None:
         """Initialize the climate entity."""
@@ -81,7 +81,14 @@ class PanasonicClimate(CoordinatorEntity[PanasonicDataUpdateCoordinator], Climat
     @property
     def preset_mode(self) -> str | None:
         """Return the current preset mode."""
-        return self.coordinator.data.get("device_status", {}).get("operation_mode")
+        return self.coordinator.data.get("device_status", {}).get("cooloven_mode")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return entity specific state attributes."""
+        return {
+            "raw_operation_mode": self.coordinator.data.get("device_status", {}).get("operation_mode"),
+        }
 
     # @property
     # def current_temperature(self) -> float | None:
