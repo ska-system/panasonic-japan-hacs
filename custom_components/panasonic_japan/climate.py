@@ -116,6 +116,7 @@ class PanasonicClimate(CoordinatorEntity[PanasonicDataUpdateCoordinator], Climat
         }
         if mode != "off":
             service_data["time"] = time
+        if mode == "quench":
             service_data["second"] = second
 
         await self.hass.services.async_call(
