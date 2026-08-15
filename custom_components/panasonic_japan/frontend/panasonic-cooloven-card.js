@@ -1,4 +1,12 @@
 class PanasonicCoolovenCard extends HTMLElement {
+  setConfig(config) {
+    if (!config) {
+      throw new Error('Invalid configuration');
+    }
+    this._config = config;
+    this._applianceId = config.appliance_id;
+  }
+
   set hass(hass) {
     const oldLang = this._lang;
     this._hass = hass;
@@ -102,11 +110,17 @@ class PanasonicCoolovenCard extends HTMLElement {
         return;
       }
       
-      this._hass.callService('panasonic_japan', 'set_cooloven', {
+      const serviceData = {
         mode: mode,
         time: timeContainer.style.display !== 'none' ? time : 0,
         second: secContainer.style.display !== 'none' ? second : 0
-      });
+      };
+
+      if (this._applianceId) {
+        serviceData.appliance_id = this._applianceId;
+      }
+
+      this._hass.callService('panasonic_japan', 'set_cooloven', serviceData);
     });
 
     this.updateFormState();
@@ -171,8 +185,7 @@ class PanasonicCoolovenCard extends HTMLElement {
     const execBtn = this.querySelector('#exec-btn');
     if (execBtn) execBtn.textContent = t.exec || "";
   }
-  
-  setConfig(config) {}
+
   getCardSize() { return 3; }
 }
 
