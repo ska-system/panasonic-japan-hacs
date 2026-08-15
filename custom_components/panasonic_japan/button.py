@@ -121,6 +121,7 @@ class CoolingAssistButton(CoordinatorEntity[PanasonicDataUpdateCoordinator], But
 
         service_data = {
             "mode": mode,
+            "appliance_id": self.coordinator.appliance_id,
         }
         if mode != "off":
             service_data["time"] = time_int

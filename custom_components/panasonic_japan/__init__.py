@@ -88,27 +88,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         mode = call.data.get("mode")
         time_min = call.data.get("time", 0)
         time_sec = call.data.get("second", 0)
+        target_appliance_id = call.data.get("appliance_id")
 
         payload = {"cooloven_mode": mode}
         if mode != "off":
             payload["cooloven_time"] = int(time_min or 0)
             payload["cooloven_second"] = int(time_sec or 0)
 
-        # 全 ConfigEntry の中身と型を詳細に出力して確認
         all_entries = hass.data.get(DOMAIN, {})
-        _LOGGER.error("[DEBUG_LOG] all_entries: %s", all_entries)
-        for entry_id, entry_coords in all_entries.items():
-            _LOGGER.error("[DEBUG_LOG] entry_id=%s, type=%s, value=%s", entry_id, type(entry_coords), entry_coords)
+        target_coordinators = []
+        for entry_coords in all_entries.values():
             if isinstance(entry_coords, dict):
-                for sub_k, sub_v in entry_coords.items():
-                    _LOGGER.error("[DEBUG_LOG]   -> key=%s, type=%s, value=%s", sub_k, type(sub_v), sub_v)
-
-        target_coordinators = [
-            coord
-            for entry_coords in all_entries.values()
-            for coord in entry_coords.values()
-            if hasattr(coord, "eoj") and (coord.eoj or "").upper() == "03B7"
-        ]
+                for coord in entry_coords.values():
+                    if isinstance(coord, PanasonicDataUpdateCoordinator):
+                        if (coord.eoj or "").upper() == "03B7":
+                            if not target_appliance_id or coord.appliance_id == target_appliance_id:
+                                target_coordinators.append(coord)
 
         for target_coord in target_coordinators:
             await hass.async_add_executor_job(
