@@ -46,6 +46,18 @@
     }
   },
   "entity": {
+    "climate": {
+      "state_attributes": {
+        "preset_mode": {
+          "state": {
+            "off": "オフ",
+            "quench": "冷ます",
+            "cold": "急冷",
+            "frozen": "急凍"
+          }
+        }
+      }
+    },
     "select": {
       "partial_mode": {
         "name": "パーシャル/チルド切替",

@@ -46,6 +46,18 @@
     }
   },
   "entity": {
+    "climate": {
+      "state_attributes": {
+        "preset_mode": {
+          "state": {
+            "off": "Off",
+            "quench": "Quench (Rapid Cooling)",
+            "cold": "Cold (Rapid Cooling)" ,
+            "frozen": "Freeze (Rapid Freezing)"
+          }
+        }
+      }
+    },
     "select": {
       "partial_mode": {
         "name": "Partial Compartment Mode",
