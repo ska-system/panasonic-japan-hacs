@@ -94,13 +94,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             payload["cooloven_time"] = int(time_min or 0)
             payload["cooloven_second"] = int(time_sec or 0)
 
-        # 全 ConfigEntry の Coordinators を動的に走査して対象機器を取得
+        # 全 ConfigEntry の中身と型を詳細に出力して確認
         all_entries = hass.data.get(DOMAIN, {})
+        _LOGGER.error("[DEBUG_LOG] all_entries: %s", all_entries)
+        for entry_id, entry_coords in all_entries.items():
+            _LOGGER.error("[DEBUG_LOG] entry_id=%s, type=%s, value=%s", entry_id, type(entry_coords), entry_coords)
+            if isinstance(entry_coords, dict):
+                for sub_k, sub_v in entry_coords.items():
+                    _LOGGER.error("[DEBUG_LOG]   -> key=%s, type=%s, value=%s", sub_k, type(sub_v), sub_v)
+
         target_coordinators = [
             coord
             for entry_coords in all_entries.values()
             for coord in entry_coords.values()
-            if (coord.eoj or "").upper() == "03B7"
+            if hasattr(coord, "eoj") and (coord.eoj or "").upper() == "03B7"
         ]
 
         for target_coord in target_coordinators:
