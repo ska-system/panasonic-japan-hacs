@@ -39,7 +39,8 @@ async def async_setup_entry(
         "cooling_assist",
         {
             vol.Required("mode"): cv.string,
-            vol.Required("duration"): vol.Coerce(int),
+            vol.Optional("time", default=0): vol.Coerce(int),
+            vol.Optional("second", default=0): vol.Coerce(int),
         },
         "async_cooling_assist",
     )
@@ -51,10 +52,6 @@ class PanasonicClimate(CoordinatorEntity[PanasonicDataUpdateCoordinator], Climat
     _attr_has_entity_name = True
     _attr_name = None
     _attr_icon = "mdi:fridge-outline"
-    # _attr_supported_features = (
-    #     ClimateEntityFeature.TARGET_TEMPERATURE 
-    #     | ClimateEntityFeature.PRESET_MODE
-    # )
     _attr_supported_features = (
         ClimateEntityFeature.PRESET_MODE
     )
@@ -90,44 +87,40 @@ class PanasonicClimate(CoordinatorEntity[PanasonicDataUpdateCoordinator], Climat
             "raw_operation_mode": self.coordinator.data.get("device_status", {}).get("operation_mode"),
         }
 
-    # @property
-    # def current_temperature(self) -> float | None:
-    #     """Return current temperature."""
-    #     return self.coordinator.data.get("device_status", {}).get("current_temp", DEFAULT_TEMPERATURE)
-
-    # @property
-    # def target_temperature(self) -> float | None:
-    #     """Return target temperature."""
-    #     return self.coordinator.data.get("device_status", {}).get("target_temp", DEFAULT_TEMPERATURE)
-
-    # async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
-    #     """Set new target hvac mode."""
-    #     await self.coordinator.async_request_refresh()
-
     async def async_set_preset_mode(self, preset_mode: str) -> None:
-        """Set new preset mode."""
-        await self.hass.async_add_executor_job(
-            self.coordinator.api.control_device,
-            self.coordinator.appliance_id,
-            {"operation_mode": preset_mode},
-        )
-        await self.coordinator.async_request_refresh()
+        """Set new preset mode by calling the set_cooloven service."""
+        service_data = {
+            "mode": preset_mode,
+            "appliance_id": self.coordinator.appliance_id,
+        }
+        if preset_mode == "quench":
+            service_data["time"] = 5
+            service_data["second"] = 0
+        elif preset_mode == "cold":
+            service_data["time"] = 15
+        elif preset_mode in ("freeze", "frozen"):
+            service_data["time"] = 45
 
-    # async def async_set_temperature(self, **kwargs: Any) -> None:
-    #     """Set new target temperature."""
-    #     temp = kwargs.get("temperature")
-    #     await self.hass.async_add_executor_job(
-    #         self.coordinator.api.control_device,
-    #         self.coordinator.appliance_id,
-    #         {"temperature": temp},
-    #     )
-    #     await self.coordinator.async_request_refresh()
-
-    async def async_cooling_assist(self, mode: str, duration: int) -> None:
-        """Execute cooling assist with mode and duration parameters."""
-        await self.hass.async_add_executor_job(
-            self.coordinator.api.control_device,
-            self.coordinator.appliance_id,
-            {"cooling_assist_mode": mode, "cooling_assist_duration": duration},
+        await self.hass.services.async_call(
+            DOMAIN,
+            "set_cooloven",
+            service_data,
+            blocking=True,
         )
-        await self.coordinator.async_request_refresh()
+
+    async def async_cooling_assist(self, mode: str, time: int = 0, second: int = 0) -> None:
+        """Execute cooling assist by calling the set_cooloven service."""
+        service_data = {
+            "mode": mode,
+            "appliance_id": self.coordinator.appliance_id,
+        }
+        if mode != "off":
+            service_data["time"] = time
+            service_data["second"] = second
+
+        await self.hass.services.async_call(
+            DOMAIN,
+            "set_cooloven",
+            service_data,
+            blocking=True,
+        )
