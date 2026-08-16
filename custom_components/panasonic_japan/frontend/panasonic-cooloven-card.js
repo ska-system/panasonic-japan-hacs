@@ -1,5 +1,5 @@
 class PanasonicCoolovenCard extends HTMLElement {
-setConfig(config) {
+  setConfig(config) {
     if (!config) {
       throw new Error('Invalid configuration');
     }
