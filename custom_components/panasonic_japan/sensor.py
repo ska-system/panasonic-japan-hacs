@@ -206,12 +206,18 @@ class PanasonicDoorOpenSensor(PanasonicSensor):
         """Return the open count for the current hour."""
         data = self.coordinator.data or {}
         door_data = data.get("door_open_info", {})
-        daily_list = door_data.get("daily", {}).get("door_open_list_time", [])
+        door_open_list = door_data.get("daily", {}).get("door_open_list", [])
         
-        # Home Assistantの標準ユーティリティを使用して現在時刻を取得
+        today_str = dt_util.now().strftime('%Y-%m-%d')
+        today_entry = next((item for item in door_open_list if item.get("date") == today_str), None)
+        
+        if not today_entry:
+            return 0
+            
+        hourly_list = today_entry.get("door_open_list_time", [])
         current_hour = dt_util.now().strftime('%H:00:00')
         
-        entry = next((item for item in daily_list if item.get("date_time") == current_hour), None)
+        entry = next((item for item in hourly_list if item.get("date_time") == current_hour), None)
         return entry.get("open_count", 0) if entry else 0
 
     @property
@@ -220,7 +226,12 @@ class PanasonicDoorOpenSensor(PanasonicSensor):
         attrs = super().extra_state_attributes
         data = self.coordinator.data or {}
         door_data = data.get("door_open_info", {})
+        door_open_list = door_data.get("daily", {}).get("door_open_list", [])
+        
+        today_str = dt_util.now().strftime('%Y-%m-%d')
+        today_entry = next((item for item in door_open_list if item.get("date") == today_str), None)
+        
         attrs.update({
-            "door_open_list_time": door_data.get("daily", {}).get("door_open_list_time", [])
+            "door_open_list_time": today_entry.get("door_open_list_time", []) if today_entry else []
         })
         return attrs
