@@ -58,8 +58,16 @@ class PanasonicCoolovenCard extends HTMLElement {
       return;
     }
 
+    let headerText = t.title || 'クーリングアシスト';
+    if (this._entity && this._hass.states[this._entity]) {
+      const entityState = this._hass.states[this._entity];
+      if (entityState.attributes && entityState.attributes.friendly_name) {
+        headerText = `${entityState.attributes.friendly_name} (${headerText})`;
+      }
+    }
+    
     this.innerHTML = `
-      <ha-card header="${t.title || ''}">
+      <ha-card header="${headerText}">
         <div style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <label id="lbl-mode" style="font-weight: 500; white-space: nowrap;">${t.mode || ''}</label>
@@ -137,7 +145,6 @@ class PanasonicCoolovenCard extends HTMLElement {
 
       let resolvedApplianceId = this._applianceId;
       
-      // 1. 指定されたエンティティから取得を試みる
       if (!resolvedApplianceId && this._entity && this._hass.states[this._entity]) {
         const entityState = this._hass.states[this._entity];
         if (entityState.attributes && entityState.attributes.appliance_id) {
@@ -145,7 +152,6 @@ class PanasonicCoolovenCard extends HTMLElement {
         }
       }
 
-      // 2. それでも取得できない場合、システム内の該当属性からフォールバック探索
       if (!resolvedApplianceId) {
         for (const stateObj of Object.values(this._hass.states)) {
           if (stateObj.attributes && stateObj.attributes.appliance_id) {
@@ -204,7 +210,17 @@ class PanasonicCoolovenCard extends HTMLElement {
 
   updateLocalization(t) {
     if (!this.content) return;
-    this.content.header = t.title || "";
+    
+    // ヘッダータイトルの動的更新時にデバイス名と多言語タイトルを保持する
+    let headerText = t.title || 'クーリングアシスト';
+    if (this._entity && this._hass && this._hass.states[this._entity]) {
+      const entityState = this._hass.states[this._entity];
+      if (entityState.attributes && entityState.attributes.friendly_name) {
+        headerText = `${entityState.attributes.friendly_name} (${headerText})`;
+      }
+    }
+    this.content.header = headerText;
+
     const lblMode = this.querySelector('#lbl-mode');
     if (lblMode) lblMode.textContent = t.mode || "";
     
