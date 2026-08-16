@@ -1,10 +1,12 @@
 class PanasonicCoolovenCard extends HTMLElement {
-  setConfig(config) {
+setConfig(config) {
     if (!config) {
       throw new Error('Invalid configuration');
     }
     this._config = config;
+    // yaml設定に appliance_id があればそれを使用、なければ entity を保持する
     this._applianceId = config.appliance_id;
+    this._entity = config.entity;
   }
 
   set hass(hass) {
@@ -116,8 +118,21 @@ class PanasonicCoolovenCard extends HTMLElement {
         second: secContainer.style.display !== 'none' ? second : 0
       };
 
-      if (this._applianceId) {
-        serviceData.appliance_id = this._applianceId;
+      // appliance_id の決定ロジック
+      let resolvedApplianceId = this._applianceId;
+      
+      // YAMLにappliance_idがなく、entityが指定されている場合は属性から取得
+      if (!resolvedApplianceId && this._entity && this._hass.states[this._entity]) {
+        const entityState = this._hass.states[this._entity];
+        if (entityState.attributes && entityState.attributes.appliance_id) {
+          resolvedApplianceId = entityState.attributes.appliance_id;
+        }
+      }
+
+      if (resolvedApplianceId) {
+        serviceData.appliance_id = resolvedApplianceId;
+      } else {
+        console.error("Appliance ID is missing. Please provide 'appliance_id' or a valid 'entity' in the card config.");
       }
 
       this._hass.callService('panasonic_japan', 'set_cooloven', serviceData);
