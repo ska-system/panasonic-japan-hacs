@@ -10,6 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
 from .const import ATTR_APPLIANCE_ID, ATTR_PRODUCT_CODE, DOMAIN
 from .coordinator import PanasonicDataUpdateCoordinator
@@ -32,6 +33,7 @@ async def async_setup_entry(
                     PanasonicOperationModeSensor(coordinator),
                     PanasonicFirmwareSensor(coordinator),
                     PanasonicCoolovenStateSensor(coordinator),
+                    PanasonicDoorOpenSensor(coordinator),
                 ]
             )
 
@@ -187,3 +189,38 @@ class PanasonicCoolovenStateSensor(PanasonicSensor):
         data = self.coordinator.data or {}
         device_status = data.get("device_status", {})
         return device_status.get("cooloven_mode", "off")
+
+class PanasonicDoorOpenSensor(PanasonicSensor):
+    """Sensor for door open count."""
+
+    _attr_name = "Door Open Count"
+    _attr_icon = "mdi:door-open"
+
+    def __init__(self, coordinator: PanasonicDataUpdateCoordinator) -> None:
+        """Initialize."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.appliance_id}_door_open_count"
+
+    @property
+    def native_value(self) -> int:
+        """Return the open count for the current hour."""
+        data = self.coordinator.data or {}
+        door_data = data.get("door_open_info", {})
+        daily_list = door_data.get("daily", {}).get("door_open_list_time", [])
+        
+        # Home Assistantの標準ユーティリティを使用して現在時刻を取得
+        current_hour = dt_util.now().strftime('%H:00:00')
+        
+        entry = next((item for item in daily_list if item.get("date_time") == current_hour), None)
+        return entry.get("open_count", 0) if entry else 0
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return extra state attributes with daily list."""
+        attrs = super().extra_state_attributes
+        data = self.coordinator.data or {}
+        door_data = data.get("door_open_info", {})
+        attrs.update({
+            "door_open_list_time": door_data.get("daily", {}).get("door_open_list_time", [])
+        })
+        return attrs
