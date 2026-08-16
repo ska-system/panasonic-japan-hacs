@@ -33,14 +33,15 @@ class RefrigeratorHandler(BaseApplianceHandler):
         notification_settings = await asyncio.to_thread(
             self.api.get_notification_settings, appliance_id, push_term_id
         )
+        door_open_info = await asyncio.to_thread(self.api.get_door_open_info, appliance_id)
 
         device_status.update(device_settings)
         return {
             "device_status": device_status,
             "notification_settings": notification_settings,
             "electricity": electricity_data,
+            "door_open_info": door_open_info,
         }
-
 
 class DefaultApplianceHandler(BaseApplianceHandler):
     """未対応の eoj 向けフォールバックハンドラー"""
