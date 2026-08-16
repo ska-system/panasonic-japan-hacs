@@ -10,6 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
 from .const import ATTR_APPLIANCE_ID, ATTR_PRODUCT_CODE, DOMAIN
 from .coordinator import PanasonicDataUpdateCoordinator
@@ -32,6 +33,7 @@ async def async_setup_entry(
                     PanasonicOperationModeSensor(coordinator),
                     PanasonicFirmwareSensor(coordinator),
                     PanasonicCoolovenStateSensor(coordinator),
+                    PanasonicDoorOpenSensor(coordinator),
                 ]
             )
 
@@ -187,3 +189,41 @@ class PanasonicCoolovenStateSensor(PanasonicSensor):
         data = self.coordinator.data or {}
         device_status = data.get("device_status", {})
         return device_status.get("cooloven_mode", "off")
+
+class PanasonicDoorOpenSensor(PanasonicSensor):
+    """Sensor for door open count."""
+
+    _attr_name = "Door Open Count"
+    _attr_icon = "mdi:door-open"
+
+    def __init__(self, coordinator: PanasonicDataUpdateCoordinator) -> None:
+        """Initialize."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.appliance_id}_door_open_count"
+
+    @property
+    def native_value(self) -> int:
+        """Return the open count for the current day."""
+        data = self.coordinator.data or {}
+        door_data = data.get("door_open_info", {})
+        
+        # 週間リストから本日の日付に一致するデータを抽出
+        weekly_list = door_data.get("weekly", {}).get("door_open_list", [])
+        today_str = dt_util.now().strftime('%Y-%m-%d')
+        
+        entry = next((item for item in weekly_list if item.get("date") == today_str), None)
+        return entry.get("open_count", 0) if entry else 0
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return extra state attributes with weekly history and average."""
+        attrs = super().extra_state_attributes
+        data = self.coordinator.data or {}
+        door_data = data.get("door_open_info", {})
+        
+        weekly_data = door_data.get("weekly", {})
+        attrs.update({
+            "weekly_door_open_list": weekly_data.get("door_open_list", []),
+            "average_open_count": weekly_data.get("average_open_count", 0),
+        })
+        return attrs

@@ -178,6 +178,17 @@ class PanasonicAPI:
         response.raise_for_status()
         return response.json()
 
+    def get_door_open_info(self, appliance_id: str) -> dict[str, Any]:
+        """Get door open count and monitoring information."""
+        appliance_id_encoded = self._url_encode_appliance_id(appliance_id)
+        url = f"{API_BASE_URL}/devices/{appliance_id_encoded}/dooropeninfo"
+
+        response = self._make_request(
+            "GET", url, headers=self._get_headers(), timeout=30
+        )
+        response.raise_for_status()
+        return response.json()
+
     def get_notification_settings(self, appliance_id: str, term_id: str) -> dict[str, Any]:
         """GET /devices/{id}/settings — get current notification settings."""
         if not term_id:
