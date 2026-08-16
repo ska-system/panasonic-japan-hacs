@@ -196,7 +196,6 @@ class PanasonicDoorOpenSensor(PanasonicSensor):
     _attr_name = "Door Open Count"
     _attr_icon = "mdi:door-open"
     _attr_state_class = SensorStateClass.MEASUREMENT
-    _attr_native_unit_of_measurement = "回"
 
     def __init__(self, coordinator: PanasonicDataUpdateCoordinator) -> None:
         """Initialize."""
