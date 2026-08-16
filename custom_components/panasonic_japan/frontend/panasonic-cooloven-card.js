@@ -4,9 +4,14 @@ class PanasonicCoolovenCard extends HTMLElement {
       throw new Error('Invalid configuration');
     }
     this._config = config;
-    // yaml設定に appliance_id があればそれを使用、なければ entity を保持する
     this._applianceId = config.appliance_id;
     this._entity = config.entity;
+  }
+
+  static getStubConfig() {
+    return {
+      entity: "climate.panasonic_fridge_nr_f607hpx_n"
+    };
   }
 
   set hass(hass) {
@@ -41,6 +46,18 @@ class PanasonicCoolovenCard extends HTMLElement {
   async render() {
     const t = await this.loadTranslations();
     
+    if (!this._config || !this._config.entity) {
+      this.innerHTML = `
+        <ha-card header="${t.title || 'Panasonic Cooloven'}">
+          <div style="padding: 16px; color: var(--error-color);">
+            エラー: entity が設定されていません。YAMLエディタで entity を指定してください。
+          </div>
+        </ha-card>
+      `;
+      this.content = this.querySelector('ha-card');
+      return;
+    }
+
     this.innerHTML = `
       <ha-card header="${t.title || ''}">
         <div style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
@@ -118,10 +135,9 @@ class PanasonicCoolovenCard extends HTMLElement {
         second: secContainer.style.display !== 'none' ? second : 0
       };
 
-      // appliance_id の決定ロジック
       let resolvedApplianceId = this._applianceId;
       
-      // YAMLにappliance_idがなく、entityが指定されている場合は属性から取得
+      // 1. 指定されたエンティティから取得を試みる
       if (!resolvedApplianceId && this._entity && this._hass.states[this._entity]) {
         const entityState = this._hass.states[this._entity];
         if (entityState.attributes && entityState.attributes.appliance_id) {
@@ -129,10 +145,20 @@ class PanasonicCoolovenCard extends HTMLElement {
         }
       }
 
+      // 2. それでも取得できない場合、システム内の該当属性からフォールバック探索
+      if (!resolvedApplianceId) {
+        for (const stateObj of Object.values(this._hass.states)) {
+          if (stateObj.attributes && stateObj.attributes.appliance_id) {
+            resolvedApplianceId = stateObj.attributes.appliance_id;
+            break;
+          }
+        }
+      }
+
       if (resolvedApplianceId) {
         serviceData.appliance_id = resolvedApplianceId;
       } else {
-        console.error("Appliance ID is missing. Please provide 'appliance_id' or a valid 'entity' in the card config.");
+        console.error("Appliance ID is missing. Please verify the card configuration.");
       }
 
       this._hass.callService('panasonic_japan', 'set_cooloven', serviceData);

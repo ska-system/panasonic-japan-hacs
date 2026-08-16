@@ -86,6 +86,7 @@ class PanasonicClimate(CoordinatorEntity[PanasonicDataUpdateCoordinator], Climat
         """Return entity specific state attributes."""
         return {
             "raw_operation_mode": self.coordinator.data.get("device_status", {}).get("operation_mode"),
+            "appliance_id": self.coordinator.appliance_id,
         }
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
