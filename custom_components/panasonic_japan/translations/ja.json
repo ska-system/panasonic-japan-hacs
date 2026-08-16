@@ -127,6 +127,12 @@
         }
       }
     },
+    "sensor": {
+      "door_open_count": {
+        "name": "ドア開閉回数",
+        "unit_of_measurement": "回"
+      }
+    },
     "number": {
       "cooling_assist_time": {
         "name": "クーリングアシスト 時間"

@@ -127,6 +127,12 @@
         }
       }
     },
+    "sensor": {
+      "door_open_count": {
+        "name": "Door Open Count",
+        "unit_of_measurement": "times"
+      }
+    },
     "number": {
       "cooling_assist_time": {
         "name": "Cooling Assist Time"
