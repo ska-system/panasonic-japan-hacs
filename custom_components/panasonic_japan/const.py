@@ -30,8 +30,8 @@ ATTR_FIRMWARE_VERSION = "firmware_version"
 ATTR_COST_REDUCTION = "cost_reduction"
 ATTR_ELECTRICITY_USAGE = "electricity_usage"
 
-# Device types
-DEVICE_TYPE_FRIDGE = "fridge"
+# EOJ codes
+EOJ_FRIDGE = "03B7"
 
 # Firebase / FCM configuration (from Panasonic Kitchen Pocket app)
 FIREBASE_SENDER_ID = "209752140776"
@@ -78,5 +78,5 @@ _PUSH_KEY = f"{DOMAIN}_push"
 
 # EOJごとの種別名称マッピング
 EOJ_NAME_MAP = {
-    "03B7": "Fridge",
+    EOJ_FRIDGE: "Fridge",
 }

@@ -11,22 +11,39 @@ from typing import Any
 import requests
 
 from .const import (
-    API_BASE_URL,
     API_KEY,
-    USER_AGENT,
-    AUTH0_AUDIENCE,
     AUTH0_CLIENT_ID,
-    AUTH0_DOMAIN,
-    AUTH0_TOKEN_URL,
-    KAPF_API_BASE_URL,
+    USER_AGENT,
     YEN_PER_KWH,
+)
+from .utils import (
+    auth0_token_url,
+    auth0_userinfo_url,
+    device_url,
+    product_url,
+    push_new_term_url,
+    user_info_url,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
+DEFAULT_TOKEN_MARGIN_SECONDS = 300
+
 
 class PanasonicAPIError(Exception):
     """Base exception for Panasonic API errors."""
+
+
+class PanasonicAuthError(PanasonicAPIError):
+    """Authentication or authorization failure."""
+
+
+class PanasonicConnectionError(PanasonicAPIError):
+    """Network-level failure (timeout, connection refused, etc.)."""
+
+
+class PanasonicRequestError(PanasonicAPIError):
+    """HTTP request failed with a non-auth error status."""
 
 
 class PanasonicAPI:
@@ -48,16 +65,37 @@ class PanasonicAPI:
             pass
         self._session = requests.Session()
 
+    def prepare_request_cycle(self) -> None:
+        """Prepare for an API request cycle with a fresh HTTP session."""
+        self.reset_session()
+
+    def ensure_token_valid(self, margin_seconds: int = DEFAULT_TOKEN_MARGIN_SECONDS) -> None:
+        """Proactively refresh the access token if it is expiring soon."""
+        if self.is_token_expiring(margin_seconds=margin_seconds):
+            _LOGGER.debug("Access token is expiring soon — refreshing proactively")
+            self.refresh_access_token()
+
+    def retry_after_auth_failure(self) -> bool:
+        """Attempt token refresh after an auth failure."""
+        try:
+            self.refresh_access_token()
+            return True
+        except PanasonicAuthError as err:
+            _LOGGER.error("Token refresh after auth failure failed: %s", err)
+            return False
+
+    def handle_connection_error(self) -> None:
+        """Reset session after a network error."""
+        _LOGGER.warning("Network error — resetting HTTP session")
+        self.reset_session()
+
     def _get_reizo_date(self) -> str:
         """Get current date in Japan timezone for X-Reizo-Date header."""
-        # Use Asia/Tokyo timezone
         try:
             from zoneinfo import ZoneInfo
 
             tz = ZoneInfo("Asia/Tokyo")
         except ImportError:
-            # Fallback for Python < 3.9
-            from datetime import timezone
             import pytz
 
             tz = pytz.timezone("Asia/Tokyo")
@@ -81,152 +119,129 @@ class PanasonicAPI:
 
         return headers
 
-    def _url_encode_appliance_id(self, appliance_id: str) -> str:
-        """Convert appliance_id to base64url path segment (matches Android z() method)."""
-        return appliance_id.replace("+", "-").replace("/", "_")
-
     def _make_request(
         self, method: str, url: str, **kwargs: Any
     ) -> requests.Response:
-        """Make an API request, raising PanasonicAPIError on auth failures."""
-        response = self._session.request(method, url, **kwargs)
+        """Make an API request with standardized error handling."""
+        try:
+            response = self._session.request(method, url, **kwargs)
+        except requests.exceptions.Timeout as err:
+            raise PanasonicConnectionError(f"Request timed out: {err}") from err
+        except requests.exceptions.ConnectionError as err:
+            raise PanasonicConnectionError(f"Connection error: {err}") from err
 
         if response.status_code in (401, 403):
-            raise PanasonicAPIError(
+            raise PanasonicAuthError(
                 f"Authentication failed: {response.status_code}"
+            )
+
+        if not response.ok:
+            raise PanasonicRequestError(
+                f"HTTP {response.status_code} for {method} {url}"
             )
 
         return response
 
     def get_auth0_user_info(self) -> dict[str, Any]:
         """Get Auth0 user info including app_metadata and member_user_id."""
-        url = f"https://{AUTH0_DOMAIN}/userinfo"
-        headers = self._get_headers()
-        response = self._make_request("GET", url, headers=headers, timeout=30)
-        response.raise_for_status()
+        url = auth0_userinfo_url()
+        response = self._make_request("GET", url, headers=self._get_headers(), timeout=30)
         return response.json()
 
     def get_user_info(self) -> dict[str, Any]:
         """Get user information and list of appliances."""
-        url = f"{KAPF_API_BASE_URL}/user/info"
+        url = user_info_url()
         headers = self._get_headers(include_reizo_date=False)
         headers["X-API-Key"] = API_KEY
         headers["User-Agent"] = USER_AGENT
 
         response = self._make_request("GET", url, headers=headers, timeout=30)
-        response.raise_for_status()
         return response.json()
 
     def get_device_status(self, appliance_id: str) -> dict[str, Any]:
         """Get device status."""
-        appliance_id_encoded = self._url_encode_appliance_id(appliance_id)
-        url = f"{API_BASE_URL}/devices/{appliance_id_encoded}/status"
-        params = {"usages": 1}
-
+        url = device_url(appliance_id, "status")
         response = self._make_request(
-            "GET", url, headers=self._get_headers(), params=params, timeout=30
+            "GET", url, headers=self._get_headers(), params={"usages": 1}, timeout=30
         )
-        response.raise_for_status()
         return response.json()
 
     def get_device_settings(self, appliance_id: str) -> dict[str, Any]:
         """Get device control settings (usages=2 = VIEWED_SETTING_SCREEN)."""
-        appliance_id_encoded = self._url_encode_appliance_id(appliance_id)
-        url = f"{API_BASE_URL}/devices/{appliance_id_encoded}/status"
-
+        url = device_url(appliance_id, "status")
         response = self._make_request(
             "GET", url, headers=self._get_headers(), params={"usages": 2}, timeout=30
         )
-        response.raise_for_status()
         return response.json()
 
     def control_device(self, appliance_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """PUT /devices/{id}/status — send a control command to the fridge."""
-        appliance_id_encoded = self._url_encode_appliance_id(appliance_id)
-        url = f"{API_BASE_URL}/devices/{appliance_id_encoded}/status"
-
+        url = device_url(appliance_id, "status")
         response = self._make_request(
             "PUT", url, headers=self._get_headers(), json=payload, timeout=30
         )
-        response.raise_for_status()
         return response.json()
 
     def get_electricity_reduction(self, appliance_id: str) -> dict[str, Any]:
         """Get electricity cost reduction data."""
-        appliance_id_encoded = self._url_encode_appliance_id(appliance_id)
-        url = f"{API_BASE_URL}/devices/{appliance_id_encoded}/reduction"
-
+        url = device_url(appliance_id, "reduction")
         response = self._make_request(
             "GET", url, headers=self._get_headers(), timeout=30
         )
-        response.raise_for_status()
         return response.json()
 
     def calculate_electricity_usage(self, cost_reduction: int) -> float:
         """Calculate electricity usage in kWh/month."""
-        # Formula: electricity_usage (kWh/month) = (750円 - cost_reduction) / 31円
         return (750 - cost_reduction) / YEN_PER_KWH
 
     def get_device_functions(self, appliance_id: str) -> dict[str, Any]:
         """Get device functions list."""
-        appliance_id_encoded = self._url_encode_appliance_id(appliance_id)
-        url = f"{API_BASE_URL}/products/{appliance_id_encoded}/functions"
-
+        url = product_url(appliance_id, "functions")
         response = self._make_request(
             "GET", url, headers=self._get_headers(), timeout=30
         )
-        response.raise_for_status()
         return response.json()
 
     def get_door_open_info(self, appliance_id: str) -> dict[str, Any]:
         """Get door open count and monitoring information."""
-        appliance_id_encoded = self._url_encode_appliance_id(appliance_id)
-        url = f"{API_BASE_URL}/devices/{appliance_id_encoded}/dooropeninfo"
-
+        url = device_url(appliance_id, "dooropeninfo")
         response = self._make_request(
             "GET", url, headers=self._get_headers(), timeout=30
         )
-        response.raise_for_status()
         return response.json()
 
     def get_notification_settings(self, appliance_id: str, term_id: str) -> dict[str, Any]:
         """GET /devices/{id}/settings — get current notification settings."""
         if not term_id:
             return {}
-        
-        appliance_id_encoded = self._url_encode_appliance_id(appliance_id)
-        url = f"{API_BASE_URL}/devices/{appliance_id_encoded}/settings"
 
+        url = device_url(appliance_id, "settings")
         response = self._make_request(
             "GET", url, headers=self._get_headers(), params={"term_id": term_id}, timeout=30
         )
-        response.raise_for_status()
         return response.json()
 
     def update_notification_settings(self, appliance_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """PUT /devices/{id}/settings — update notification settings."""
-        appliance_id_encoded = self._url_encode_appliance_id(appliance_id)
-        url = f"{API_BASE_URL}/devices/{appliance_id_encoded}/settings"
-
+        url = device_url(appliance_id, "settings")
         response = self._make_request(
             "PUT", url, headers=self._get_headers(), json=payload, timeout=30
         )
-        response.raise_for_status()
         if not response.content:
             return None
-        
+
         try:
             return response.json()
         except Exception:
             return None
-    
+
     def register_push_term(
         self, term_id: str, fcm_token: str, firebase_install_id: str
     ) -> dict[str, Any] | None:
         """Register FCM push token with Panasonic API."""
         from .const import PUSH_TYPE
 
-        url = f"{KAPF_API_BASE_URL}/push/new-term"
+        url = push_new_term_url()
         headers = self._get_headers(include_reizo_date=False)
         headers["X-API-Key"] = API_KEY
         headers["User-Agent"] = USER_AGENT
@@ -243,16 +258,14 @@ class PanasonicAPI:
             response = self._make_request(
                 "POST", url, json=data, headers=headers, timeout=30
             )
-            response.raise_for_status()
             return response.json()
-        except Exception as err:
+        except PanasonicAPIError as err:
             _LOGGER.exception("Error registering push term: %s", err)
             return None
 
     def link_push_to_device(self, appliance_id: str, term_id: str) -> dict[str, Any] | None:
         """GET /devices/{id}/settings?term_id=... — links the push term to the fridge."""
-        appliance_id_encoded = self._url_encode_appliance_id(appliance_id)
-        url = f"{API_BASE_URL}/devices/{appliance_id_encoded}/settings"
+        url = device_url(appliance_id, "settings")
         try:
             response = self._make_request(
                 "GET",
@@ -261,16 +274,15 @@ class PanasonicAPI:
                 params={"term_id": term_id},
                 timeout=30,
             )
-            response.raise_for_status()
             return response.json()
-        except Exception as err:
+        except PanasonicAPIError as err:
             _LOGGER.exception("Error linking push term to device: %s", err)
             return None
 
-    def refresh_access_token(self) -> dict[str, Any] | None:
+    def refresh_access_token(self) -> dict[str, Any]:
         """Refresh the access token using refresh token."""
         if not self._refresh_token:
-            raise PanasonicAPIError("No refresh token available")
+            raise PanasonicAuthError("No refresh token available")
 
         headers = {
             "Content-Type": "application/x-www-form-urlencoded",
@@ -284,34 +296,45 @@ class PanasonicAPI:
         }
 
         try:
-            response = self._session.post(AUTH0_TOKEN_URL, data=data, headers=headers, timeout=30)
-            response.raise_for_status()
-            token_data = response.json()
+            response = self._session.post(
+                auth0_token_url(), data=data, headers=headers, timeout=30
+            )
+        except requests.exceptions.Timeout as err:
+            raise PanasonicConnectionError(f"Token refresh timed out: {err}") from err
+        except requests.exceptions.ConnectionError as err:
+            raise PanasonicConnectionError(f"Token refresh connection error: {err}") from err
 
-            # Update tokens
-            self._access_token = token_data.get("access_token")
-            if "refresh_token" in token_data:
-                self._refresh_token = token_data.get("refresh_token")
+        if response.status_code in (401, 403):
+            raise PanasonicAuthError(
+                f"Token refresh authentication failed: {response.status_code}"
+            )
 
-            return token_data
-        except Exception as err:
-            _LOGGER.exception("Error refreshing access token: %s", err)
-            raise PanasonicAPIError(f"Failed to refresh token: {err}") from err
+        if not response.ok:
+            raise PanasonicRequestError(
+                f"Token refresh failed with HTTP {response.status_code}"
+            )
 
-    def is_token_expiring(self, margin_seconds: int = 300) -> bool:
+        token_data = response.json()
+        self._access_token = token_data.get("access_token")
+        if "refresh_token" in token_data:
+            self._refresh_token = token_data.get("refresh_token")
+
+        if not self._access_token:
+            raise PanasonicAuthError("Token refresh returned empty access token")
+
+        return token_data
+
+    def is_token_expiring(self, margin_seconds: int = DEFAULT_TOKEN_MARGIN_SECONDS) -> bool:
         """Return True if the access token expires within margin_seconds."""
         if not self._access_token:
             return True
         try:
-            # JWT payload is the second base64url-encoded segment
             payload_b64 = self._access_token.split(".")[1]
-            # Add padding if needed
             payload_b64 += "=" * (-len(payload_b64) % 4)
             payload = json.loads(base64.urlsafe_b64decode(payload_b64))
             exp = payload.get("exp", 0)
             return time.time() + margin_seconds >= exp
         except Exception:
-            # If we can't decode, assume it's expiring to be safe
             return True
 
     @property
@@ -323,4 +346,3 @@ class PanasonicAPI:
     def refresh_token(self) -> str | None:
         """Get current refresh token."""
         return self._refresh_token
-

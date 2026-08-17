@@ -15,6 +15,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import PanasonicDataUpdateCoordinator
+from .data import PanasonicDataStore
+from .utils import is_fridge_eoj
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -100,11 +102,11 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Panasonic Japan switches from a config entry."""
-    coordinators: dict[str, PanasonicDataUpdateCoordinator] = hass.data[DOMAIN][entry.entry_id]
+    coordinators = PanasonicDataStore.get(hass).get_coordinators(entry.entry_id)
 
     entities = []
     for coordinator in coordinators.values():
-        if (coordinator.eoj or "").upper() == "03B7":
+        if is_fridge_eoj(coordinator.eoj):
             data = coordinator.data or {}
             device_status = data.get("device_status", {})
             notification_settings = data.get("notification_settings", {})
