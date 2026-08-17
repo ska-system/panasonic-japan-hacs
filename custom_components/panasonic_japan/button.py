@@ -13,6 +13,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import PanasonicDataUpdateCoordinator
+from .data import PanasonicDataStore
+from .utils import is_fridge_eoj
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -23,12 +25,11 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the button platform."""
-    coordinators: dict[str, PanasonicDataUpdateCoordinator] = hass.data[DOMAIN][entry.entry_id]
+    coordinators = PanasonicDataStore.get(hass).get_coordinators(entry.entry_id)
 
     entities = []
     for coordinator in coordinators.values():
-        # 冷蔵庫（EOJ: 03B7）の場合のみクーリングアシストボタンを生成
-        if (coordinator.eoj or "").upper() == "03B7":
+        if is_fridge_eoj(coordinator.eoj):
             entities.append(CoolingAssistButton(coordinator))
 
     async_add_entities(entities)

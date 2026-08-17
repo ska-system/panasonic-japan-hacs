@@ -14,6 +14,8 @@ from homeassistant.util import dt as dt_util
 
 from .const import ATTR_APPLIANCE_ID, ATTR_PRODUCT_CODE, DOMAIN
 from .coordinator import PanasonicDataUpdateCoordinator
+from .data import PanasonicDataStore
+from .utils import is_fridge_eoj
 
 
 async def async_setup_entry(
@@ -22,11 +24,11 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Panasonic Japan sensors from a config entry."""
-    coordinators: dict[str, PanasonicDataUpdateCoordinator] = hass.data[DOMAIN][entry.entry_id]
+    coordinators = PanasonicDataStore.get(hass).get_coordinators(entry.entry_id)
 
     sensors = []
     for coordinator in coordinators.values():
-        if (coordinator.eoj or "").upper() == "03B7":
+        if is_fridge_eoj(coordinator.eoj):
             sensors.extend(
                 [
                     PanasonicCostReductionSensor(coordinator),

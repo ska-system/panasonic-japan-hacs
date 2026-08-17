@@ -14,6 +14,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import PanasonicDataUpdateCoordinator
+from .data import PanasonicDataStore
+from .utils import is_fridge_eoj
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -93,11 +95,11 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Panasonic Japan selects from a config entry."""
-    coordinators: dict[str, PanasonicDataUpdateCoordinator] = hass.data[DOMAIN][entry.entry_id]
+    coordinators = PanasonicDataStore.get(hass).get_coordinators(entry.entry_id)
 
     entities = []
     for coordinator in coordinators.values():
-        if (coordinator.eoj or "").upper() == "03B7":
+        if is_fridge_eoj(coordinator.eoj):
             device_status = (coordinator.data or {}).get("device_status", {})
             for description in SELECTS:
                 if description.status_key:
@@ -142,8 +144,8 @@ class PanasonicSelect(CoordinatorEntity[PanasonicDataUpdateCoordinator], SelectE
         """Run when entity about to be added to hass."""
         await super().async_added_to_hass()
         if not self.entity_description.status_key and self.entity_description.key == "cooling_assist_mode":
-            custom_data = self.hass.data.setdefault(DOMAIN, {}).setdefault(f"{self._entry_id}_custom", {})
-            custom_data["cooling_assist_mode"] = self._attr_current_option
+            custom_data = PanasonicDataStore.get(self.hass).get_custom(self._entry_id)
+            custom_data.cooling_assist_mode = self._attr_current_option
 
     @property
     def current_option(self) -> str | None:
@@ -169,10 +171,10 @@ class PanasonicSelect(CoordinatorEntity[PanasonicDataUpdateCoordinator], SelectE
             self._attr_current_option = option
             
             if self.entity_description.key == "cooling_assist_mode":
-                custom_data = self.hass.data.setdefault(DOMAIN, {}).setdefault(f"{self._entry_id}_custom", {})
-                custom_data["cooling_assist_mode"] = option
+                custom_data = PanasonicDataStore.get(self.hass).get_custom(self._entry_id)
+                custom_data.cooling_assist_mode = option
 
-                number_entities = custom_data.get("number_entities", {})
+                number_entities = custom_data.number_entities
                 time_ent = number_entities.get("cooling_assist_time")
                 sec_ent = number_entities.get("cooling_assist_second")
 
