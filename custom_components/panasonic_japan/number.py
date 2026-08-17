@@ -19,6 +19,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import PanasonicDataUpdateCoordinator
+from .data import PanasonicDataStore
+from .utils import is_fridge_eoj
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -77,11 +79,11 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Panasonic Japan numbers from a config entry."""
-    coordinators: dict[str, PanasonicDataUpdateCoordinator] = hass.data[DOMAIN][entry.entry_id]
+    coordinators = PanasonicDataStore.get(hass).get_coordinators(entry.entry_id)
 
     entities = []
     for coordinator in coordinators.values():
-        if (coordinator.eoj or "").upper() == "03B7":
+        if is_fridge_eoj(coordinator.eoj):
             for description in NUMBERS:
                 entities.append(PanasonicNumber(coordinator, description, entry.entry_id))
 
@@ -120,15 +122,12 @@ class PanasonicNumber(CoordinatorEntity[PanasonicDataUpdateCoordinator], NumberE
     async def async_added_to_hass(self) -> None:
         """Run when entity about to be added to hass."""
         await super().async_added_to_hass()
-        custom_data = self.hass.data.setdefault(DOMAIN, {}).setdefault(f"{self._entry_id}_custom", {})
-        if "number_entities" not in custom_data:
-            custom_data["number_entities"] = {}
-        custom_data["number_entities"][self.entity_description.key] = self
+        custom_data = PanasonicDataStore.get(self.hass).get_custom(self._entry_id)
+        custom_data.number_entities[self.entity_description.key] = self
 
     def _get_current_mode(self) -> str:
         """Get current cooling assist mode."""
-        custom_data = self.hass.data.get(DOMAIN, {}).get(f"{self._entry_id}_custom", {})
-        return custom_data.get("cooling_assist_mode", "off")
+        return PanasonicDataStore.get(self.hass).get_custom(self._entry_id).cooling_assist_mode
 
     @property
     def native_min_value(self) -> float:

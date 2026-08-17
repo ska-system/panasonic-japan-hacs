@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 from .api import PanasonicAPI
+from .const import EOJ_FRIDGE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ class APIHandlerFactory:
     """eoj に基づいて適切なハンドラーを生成するファクトリ"""
 
     _HANDLERS: dict[str, type[BaseApplianceHandler]] = {
-        "03B7": RefrigeratorHandler,  # 03B7: 冷蔵庫
+        EOJ_FRIDGE: RefrigeratorHandler,
     }
 
     @classmethod
