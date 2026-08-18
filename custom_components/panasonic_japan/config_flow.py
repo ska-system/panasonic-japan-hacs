@@ -9,12 +9,13 @@ import secrets
 from typing import Any
 from urllib.parse import parse_qs, quote, urlparse
 
-import requests
+import aiohttp
 import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.const import CONF_ACCESS_TOKEN
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import PanasonicAPI
 from .const import (
@@ -118,7 +119,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.exception("Error extracting code from callback URL: %s", err)
             return None
 
-    def _exchange_code_for_tokens(
+    async def _exchange_code_for_tokens(
         self, code: str, code_verifier: str
     ) -> dict[str, Any] | None:
         """Exchange authorization code for access and refresh tokens."""
@@ -132,9 +133,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 "code_verifier": code_verifier,
             }
 
-            response = requests.post(token_url, data=data, timeout=30)
-            response.raise_for_status()
-            return response.json()
+            session = async_get_clientsession(self.hass)
+            timeout = aiohttp.ClientTimeout(total=30)
+            async with session.post(token_url, data=data, timeout=timeout) as response:
+                response.raise_for_status()
+                return await response.json()
         except Exception as err:
             _LOGGER.exception("Error exchanging code for tokens: %s", err)
             return None
@@ -209,9 +212,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         # Exchange code for tokens
         try:
-            token_response = await self.hass.async_add_executor_job(
-                self._exchange_code_for_tokens, code, code_verifier
-            )
+            token_response = await self._exchange_code_for_tokens(code, code_verifier)
 
             if not token_response:
                 errors["base"] = "token_exchange_failed"
@@ -238,11 +239,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     errors=errors,
                 )
 
-            api = PanasonicAPI(access_token=access_token)
+            session = async_get_clientsession(self.hass)
+            api = PanasonicAPI(session=session, access_token=access_token)
             
             # Validate token by getting user info
             # Auth0のuserinfoから member_user_id を取得
-            auth0_user_info = await self.hass.async_add_executor_job(api.get_auth0_user_info)
+            auth0_user_info = await api.get_auth0_user_info()
             app_metadata = auth0_user_info.get("https://club.panasonic.jp/userinfo/app_metadata", {})
             member_id = app_metadata.get("member_user_id")
 
@@ -259,7 +261,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     errors=errors,
                 )
             
-            user_info = await self.hass.async_add_executor_job(api.get_user_info)
+            user_info = await api.get_user_info()
 
             if not user_info:
                 errors["base"] = "invalid_token"
@@ -400,9 +402,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
 
         try:
-            token_response = await self.hass.async_add_executor_job(
-                self._exchange_code_for_tokens, code, code_verifier
-            )
+            token_response = await self._exchange_code_for_tokens(code, code_verifier)
 
             if not token_response:
                 errors["base"] = "token_exchange_failed"
@@ -430,8 +430,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             member_id = existing_entry.data.get("member_id")
 
             # 再認証時にも家電リストを最新化
-            api = PanasonicAPI(access_token=access_token)
-            user_info = await self.hass.async_add_executor_job(api.get_user_info)
+            session = async_get_clientsession(self.hass)
+            api = PanasonicAPI(session=session, access_token=access_token)
+            user_info = await api.get_user_info()
             appliances = user_info.get("myAppliances", []) if user_info else existing_entry.data.get("appliances", [])
 
             new_data = {

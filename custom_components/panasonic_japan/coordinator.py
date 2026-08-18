@@ -73,7 +73,7 @@ class PanasonicDataUpdateCoordinator(DataUpdateCoordinator):
 
         _LOGGER.info("Refreshing Panasonic access token")
         try:
-            await self.hass.async_add_executor_job(self.api.refresh_access_token)
+            await self.api.refresh_access_token()
         except PanasonicAuthError as err:
             _LOGGER.error("Token refresh failed: %s — re-authentication required", err)
             return False
@@ -96,10 +96,8 @@ class PanasonicDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self) -> dict:
         """Fetch data from Panasonic API."""
-        await self.hass.async_add_executor_job(self.api.prepare_request_cycle)
-
         try:
-            await self.hass.async_add_executor_job(self.api.ensure_token_valid)
+            await self.api.ensure_token_valid()
         except PanasonicAuthError:
             if not await self._async_refresh_and_persist():
                 raise UpdateFailed(
@@ -121,7 +119,7 @@ class PanasonicDataUpdateCoordinator(DataUpdateCoordinator):
             raise UpdateFailed(f"Authentication failed: {err}") from err
 
         except PanasonicConnectionError as err:
-            await self.hass.async_add_executor_job(self.api.handle_connection_error)
+            self.api.handle_connection_error()
             raise UpdateFailed(f"Network error (will retry): {err}") from err
 
         except PanasonicAPIError as err:

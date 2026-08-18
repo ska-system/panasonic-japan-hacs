@@ -8,6 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ACCESS_TOKEN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import PanasonicAPI
 from .const import DOMAIN, EOJ_NAME_MAP, PLATFORMS
@@ -28,7 +29,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not appliances:
         _LOGGER.warning("No appliances found in config entry, but continuing setup.")
 
+    session = async_get_clientsession(hass)
     api = PanasonicAPI(
+        session=session,
         access_token=entry.data.get(CONF_ACCESS_TOKEN),
         refresh_token=entry.data.get("refresh_token"),
     )
