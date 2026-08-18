@@ -9,13 +9,12 @@ from homeassistant.const import UnitOfTemperature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_platform, config_validation as cv
-from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import PanasonicDataUpdateCoordinator
 from .data import PanasonicDataStore
+from .entity import PanasonicEntity
 from .utils import is_fridge_eoj
 
 DEFAULT_TEMPERATURE = 4.0
@@ -48,10 +47,9 @@ async def async_setup_entry(
     )
 
 
-class PanasonicClimate(CoordinatorEntity[PanasonicDataUpdateCoordinator], ClimateEntity):
+class PanasonicClimate(PanasonicEntity, ClimateEntity):
     """Representation of a Panasonic fridge as a climate entity."""
 
-    _attr_has_entity_name = True
     _attr_name = None
     _attr_icon = "mdi:fridge-outline"
     _attr_translation_key = "panasonic_fridge"
@@ -66,12 +64,6 @@ class PanasonicClimate(CoordinatorEntity[PanasonicDataUpdateCoordinator], Climat
         """Initialize the climate entity."""
         super().__init__(coordinator)
         self._attr_unique_id = f"{coordinator.appliance_id}_climate"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, coordinator.appliance_id)},
-            name=f"Panasonic Fridge ({coordinator.product_code})",
-            manufacturer="Panasonic",
-            model=coordinator.product_code,
-        )
 
     @property
     def hvac_mode(self) -> HVACMode:

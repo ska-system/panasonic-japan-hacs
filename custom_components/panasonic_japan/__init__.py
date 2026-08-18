@@ -24,7 +24,7 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Panasonic Japan from a config entry."""
     appliances = entry.data.get("appliances", [])
-    _LOGGER.info("[DEBUG_LOG] appliances in entry.data: %s", appliances)
+    _LOGGER.debug("Appliances in entry data: %s", appliances)
 
     if not appliances:
         _LOGGER.warning("No appliances found in config entry, but continuing setup.")
@@ -57,10 +57,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if product_code:
             appliance_info["product_code"] = product_code
 
-        _LOGGER.info("[DEBUG_LOG] Processing appliance_id: %s, info: %s", appliance_id, appliance_info)
+        _LOGGER.debug("Processing appliance_id: %s, info: %s", appliance_id, appliance_info)
 
         if not appliance_id:
-            _LOGGER.warning("[DEBUG_LOG] appliance_id is empty, skipping.")
+            _LOGGER.warning("Appliance ID is empty, skipping.")
             continue
 
         coordinator = PanasonicDataUpdateCoordinator(hass, entry, appliance_info, api)
@@ -74,7 +74,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         resolved_product_code = coordinator.product_code or product_code
         device_name = f"Panasonic {device_type_name} ({resolved_product_code})"
 
-        _LOGGER.info("[DEBUG_LOG] Creating device in DeviceRegistry: %s (id: %s)", device_name, appliance_id)
+        _LOGGER.debug("Creating device in DeviceRegistry: %s (id: %s)", device_name, appliance_id)
         device_reg.async_get_or_create(
             config_entry_id=entry.entry_id,
             identifiers={(DOMAIN, appliance_id)},

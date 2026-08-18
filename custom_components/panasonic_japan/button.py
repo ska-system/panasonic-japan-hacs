@@ -7,13 +7,12 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import PanasonicDataUpdateCoordinator
 from .data import PanasonicDataStore
+from .entity import PanasonicEntity
 from .utils import is_fridge_eoj
 
 _LOGGER = logging.getLogger(__name__)
@@ -35,10 +34,9 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class CoolingAssistButton(CoordinatorEntity[PanasonicDataUpdateCoordinator], ButtonEntity):
+class CoolingAssistButton(PanasonicEntity, ButtonEntity):
     """Representation of the Cooling Assist trigger button."""
 
-    _attr_has_entity_name = True
     _attr_translation_key = "cooling_assist"
 
     def __init__(self, coordinator: PanasonicDataUpdateCoordinator) -> None:
@@ -46,12 +44,6 @@ class CoolingAssistButton(CoordinatorEntity[PanasonicDataUpdateCoordinator], But
         super().__init__(coordinator)
         self._attr_unique_id = f"{coordinator.appliance_id}_cooling_assist"
         self._attr_icon = "mdi:snowflake"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, coordinator.appliance_id)},
-            name=f"Panasonic Fridge ({coordinator.product_code})",
-            manufacturer="Panasonic",
-            model=coordinator.product_code,
-        )
 
     async def async_press(self) -> None:
         """Handle the button press action with validation and clamping."""
