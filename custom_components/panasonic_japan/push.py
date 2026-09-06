@@ -130,8 +130,7 @@ class PanasonicPushHandler:
                 .get("fid")
                 or str(uuid.uuid4())
             )
-            term_data = await self.hass.async_add_executor_job(
-                self.api.register_push_term,
+            term_data = await self.api.register_push_term(
                 term_id,
                 fcm_token,
                 firebase_install_id,
@@ -154,9 +153,7 @@ class PanasonicPushHandler:
 
             if appliance_id:
                 try:
-                    await self.hass.async_add_executor_job(
-                        self.api.link_push_to_device, appliance_id, term_id
-                    )
+                    await self.api.link_push_to_device(appliance_id, term_id)
                     _LOGGER.debug("Push term linked to device %s", appliance_id)
                 except Exception as err:
                     _LOGGER.warning("Failed to link push term to device %s: %s", appliance_id, err)

@@ -27,21 +27,30 @@ class RefrigeratorHandler(BaseApplianceHandler):
     """冷蔵庫（EOJ: 03B7）専用のAPIハンドラー"""
 
     async def fetch_all_data(self, appliance_id: str, push_term_id: str = "") -> dict[str, Any]:
-        # 同一の requests.Session に対するスレッド競合を防ぐため順次実行
-        device_status = await asyncio.to_thread(self.api.get_device_status, appliance_id)
-        device_settings = await asyncio.to_thread(self.api.get_device_settings, appliance_id)
-        electricity_data = await asyncio.to_thread(self.api.get_electricity_reduction, appliance_id)
-        notification_settings = await asyncio.to_thread(
-            self.api.get_notification_settings, appliance_id, push_term_id
+        # aiohttp により 5 つのエンドポイントを非同期に完全並列取得
+        (
+            device_status,
+            device_settings,
+            electricity_data,
+            notification_settings,
+            door_open_info,
+        ) = await asyncio.gather(
+            self.api.get_device_status(appliance_id),
+            self.api.get_device_settings(appliance_id),
+            self.api.get_electricity_reduction(appliance_id),
+            self.api.get_notification_settings(appliance_id, push_term_id),
+            self.api.get_door_open_info(appliance_id),
         )
-        door_open_info = await asyncio.to_thread(self.api.get_door_open_info, appliance_id)
 
-        device_status.update(device_settings)
+        merged_status = dict(device_status) if isinstance(device_status, dict) else {}
+        if isinstance(device_settings, dict):
+            merged_status.update(device_settings)
+
         return {
-            "device_status": device_status,
-            "notification_settings": notification_settings,
-            "electricity": electricity_data,
-            "door_open_info": door_open_info,
+            "device_status": merged_status,
+            "notification_settings": notification_settings if isinstance(notification_settings, dict) else {},
+            "electricity": electricity_data if isinstance(electricity_data, dict) else {},
+            "door_open_info": door_open_info if isinstance(door_open_info, dict) else {},
         }
 
 class DefaultApplianceHandler(BaseApplianceHandler):

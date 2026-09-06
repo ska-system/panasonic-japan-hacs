@@ -28,8 +28,7 @@ async def handle_set_cooloven(hass: HomeAssistant, call: ServiceCall) -> None:
 
     store = PanasonicDataStore.get(hass)
     for coordinator in store.iter_fridge_coordinators(target_appliance_id):
-        await hass.async_add_executor_job(
-            coordinator.api.control_device,
+        await coordinator.api.control_device(
             coordinator.appliance_id,
             payload,
         )

@@ -1,6 +1,7 @@
 """API client for Panasonic Japan Kitchen Appliances."""
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import logging
@@ -8,7 +9,7 @@ import time
 from datetime import datetime
 from typing import Any
 
-import requests
+import aiohttp
 
 from .const import (
     API_KEY,
@@ -50,44 +51,56 @@ class PanasonicAPI:
     """API client for Panasonic Japan Kitchen Appliances."""
 
     def __init__(
-        self, access_token: str | None = None, refresh_token: str | None = None
+        self,
+        session: aiohttp.ClientSession | None = None,
+        access_token: str | None = None,
+        refresh_token: str | None = None,
     ) -> None:
         """Initialize the API client."""
+        self._session = session
+        self._internal_session: aiohttp.ClientSession | None = None
         self._access_token = access_token
         self._refresh_token = refresh_token
-        self._session = requests.Session()
+
+    async def _get_session(self) -> aiohttp.ClientSession:
+        """Get or create an aiohttp ClientSession."""
+        if self._session and not self._session.closed:
+            return self._session
+        if self._internal_session is None or self._internal_session.closed:
+            self._internal_session = aiohttp.ClientSession()
+        return self._internal_session
+
+    async def close(self) -> None:
+        """Close the internal session if created."""
+        if self._internal_session and not self._internal_session.closed:
+            await self._internal_session.close()
 
     def reset_session(self) -> None:
-        """Close and recreate the HTTP session (clears stale connections)."""
-        try:
-            self._session.close()
-        except Exception:
-            pass
-        self._session = requests.Session()
+        """No-op for aiohttp shared session compatibility."""
+        pass
 
     def prepare_request_cycle(self) -> None:
-        """Prepare for an API request cycle with a fresh HTTP session."""
-        self.reset_session()
+        """No-op for aiohttp shared session compatibility."""
+        pass
 
-    def ensure_token_valid(self, margin_seconds: int = DEFAULT_TOKEN_MARGIN_SECONDS) -> None:
+    async def ensure_token_valid(self, margin_seconds: int = DEFAULT_TOKEN_MARGIN_SECONDS) -> None:
         """Proactively refresh the access token if it is expiring soon."""
         if self.is_token_expiring(margin_seconds=margin_seconds):
             _LOGGER.debug("Access token is expiring soon — refreshing proactively")
-            self.refresh_access_token()
+            await self.refresh_access_token()
 
-    def retry_after_auth_failure(self) -> bool:
+    async def retry_after_auth_failure(self) -> bool:
         """Attempt token refresh after an auth failure."""
         try:
-            self.refresh_access_token()
+            await self.refresh_access_token()
             return True
         except PanasonicAuthError as err:
             _LOGGER.error("Token refresh after auth failure failed: %s", err)
             return False
 
     def handle_connection_error(self) -> None:
-        """Reset session after a network error."""
-        _LOGGER.warning("Network error — resetting HTTP session")
-        self.reset_session()
+        """Log connection error (aiohttp manages reconnection automatically)."""
+        _LOGGER.warning("Network error encountered — aiohttp will handle reconnection on next request")
 
     def _get_reizo_date(self) -> str:
         """Get current date in Japan timezone for X-Reizo-Date header."""
@@ -119,123 +132,123 @@ class PanasonicAPI:
 
         return headers
 
-    def _make_request(
+    async def _make_request(
         self, method: str, url: str, **kwargs: Any
-    ) -> requests.Response:
+    ) -> Any:
         """Make an API request with standardized error handling."""
+        session = await self._get_session()
+        timeout_sec = kwargs.pop("timeout", 30)
+        timeout = aiohttp.ClientTimeout(total=timeout_sec)
+
         try:
-            response = self._session.request(method, url, **kwargs)
-        except requests.exceptions.Timeout as err:
-            raise PanasonicConnectionError(f"Request timed out: {err}") from err
-        except requests.exceptions.ConnectionError as err:
-            raise PanasonicConnectionError(f"Connection error: {err}") from err
+            async with session.request(method, url, timeout=timeout, **kwargs) as response:
+                if response.status in (401, 403):
+                    raise PanasonicAuthError(
+                        f"Authentication failed: {response.status}"
+                    )
 
-        if response.status_code in (401, 403):
-            raise PanasonicAuthError(
-                f"Authentication failed: {response.status_code}"
-            )
+                if response.status >= 400:
+                    raise PanasonicRequestError(
+                        f"HTTP {response.status} for {method} {url}"
+                    )
 
-        if not response.ok:
-            raise PanasonicRequestError(
-                f"HTTP {response.status_code} for {method} {url}"
-            )
+                if response.status == 204:
+                    return None
 
-        return response
+                text = await response.text()
+                if not text:
+                    return None
 
-    def get_auth0_user_info(self) -> dict[str, Any]:
+                try:
+                    return json.loads(text)
+                except Exception:
+                    return text
+
+        except (asyncio.TimeoutError, aiohttp.ClientConnectorError, aiohttp.ServerTimeoutError) as err:
+            raise PanasonicConnectionError(f"Request timed out / connection error: {err}") from err
+        except aiohttp.ClientError as err:
+            raise PanasonicConnectionError(f"Network error: {err}") from err
+
+    async def get_auth0_user_info(self) -> dict[str, Any]:
         """Get Auth0 user info including app_metadata and member_user_id."""
         url = auth0_userinfo_url()
-        response = self._make_request("GET", url, headers=self._get_headers(), timeout=30)
-        return response.json()
+        return await self._make_request("GET", url, headers=self._get_headers(), timeout=30)
 
-    def get_user_info(self) -> dict[str, Any]:
+    async def get_user_info(self) -> dict[str, Any]:
         """Get user information and list of appliances."""
         url = user_info_url()
         headers = self._get_headers(include_reizo_date=False)
         headers["X-API-Key"] = API_KEY
         headers["User-Agent"] = USER_AGENT
 
-        response = self._make_request("GET", url, headers=headers, timeout=30)
-        return response.json()
+        return await self._make_request("GET", url, headers=headers, timeout=30)
 
-    def get_device_status(self, appliance_id: str) -> dict[str, Any]:
+    async def get_device_status(self, appliance_id: str) -> dict[str, Any]:
         """Get device status."""
         url = device_url(appliance_id, "status")
-        response = self._make_request(
-            "GET", url, headers=self._get_headers(), params={"usages": 1}, timeout=30
+        return await self._make_request(
+            "GET", url, headers=self._get_headers(), params={"usages": "1"}, timeout=30
         )
-        return response.json()
 
-    def get_device_settings(self, appliance_id: str) -> dict[str, Any]:
+    async def get_device_settings(self, appliance_id: str) -> dict[str, Any]:
         """Get device control settings (usages=2 = VIEWED_SETTING_SCREEN)."""
         url = device_url(appliance_id, "status")
-        response = self._make_request(
-            "GET", url, headers=self._get_headers(), params={"usages": 2}, timeout=30
+        return await self._make_request(
+            "GET", url, headers=self._get_headers(), params={"usages": "2"}, timeout=30
         )
-        return response.json()
 
-    def control_device(self, appliance_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    async def control_device(self, appliance_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """PUT /devices/{id}/status — send a control command to the fridge."""
         url = device_url(appliance_id, "status")
-        response = self._make_request(
+        return await self._make_request(
             "PUT", url, headers=self._get_headers(), json=payload, timeout=30
         )
-        return response.json()
 
-    def get_electricity_reduction(self, appliance_id: str) -> dict[str, Any]:
+    async def get_electricity_reduction(self, appliance_id: str) -> dict[str, Any]:
         """Get electricity cost reduction data."""
         url = device_url(appliance_id, "reduction")
-        response = self._make_request(
+        return await self._make_request(
             "GET", url, headers=self._get_headers(), timeout=30
         )
-        return response.json()
 
     def calculate_electricity_usage(self, cost_reduction: int) -> float:
         """Calculate electricity usage in kWh/month."""
         return (750 - cost_reduction) / YEN_PER_KWH
 
-    def get_device_functions(self, appliance_id: str) -> dict[str, Any]:
+    async def get_device_functions(self, appliance_id: str) -> dict[str, Any]:
         """Get device functions list."""
         url = product_url(appliance_id, "functions")
-        response = self._make_request(
+        return await self._make_request(
             "GET", url, headers=self._get_headers(), timeout=30
         )
-        return response.json()
 
-    def get_door_open_info(self, appliance_id: str) -> dict[str, Any]:
+    async def get_door_open_info(self, appliance_id: str) -> dict[str, Any]:
         """Get door open count and monitoring information."""
         url = device_url(appliance_id, "dooropeninfo")
-        response = self._make_request(
+        return await self._make_request(
             "GET", url, headers=self._get_headers(), timeout=30
         )
-        return response.json()
 
-    def get_notification_settings(self, appliance_id: str, term_id: str) -> dict[str, Any]:
+    async def get_notification_settings(self, appliance_id: str, term_id: str) -> dict[str, Any]:
         """GET /devices/{id}/settings — get current notification settings."""
         if not term_id:
             return {}
 
         url = device_url(appliance_id, "settings")
-        response = self._make_request(
+        res = await self._make_request(
             "GET", url, headers=self._get_headers(), params={"term_id": term_id}, timeout=30
         )
-        return response.json()
+        return res if isinstance(res, dict) else {}
 
-    def update_notification_settings(self, appliance_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    async def update_notification_settings(self, appliance_id: str, payload: dict[str, Any]) -> dict[str, Any] | None:
         """PUT /devices/{id}/settings — update notification settings."""
         url = device_url(appliance_id, "settings")
-        response = self._make_request(
+        res = await self._make_request(
             "PUT", url, headers=self._get_headers(), json=payload, timeout=30
         )
-        if not response.content:
-            return None
+        return res if isinstance(res, dict) else None
 
-        try:
-            return response.json()
-        except Exception:
-            return None
-
-    def register_push_term(
+    async def register_push_term(
         self, term_id: str, fcm_token: str, firebase_install_id: str
     ) -> dict[str, Any] | None:
         """Register FCM push token with Panasonic API."""
@@ -255,31 +268,29 @@ class PanasonicAPI:
         }
 
         try:
-            response = self._make_request(
+            return await self._make_request(
                 "POST", url, json=data, headers=headers, timeout=30
             )
-            return response.json()
         except PanasonicAPIError as err:
             _LOGGER.exception("Error registering push term: %s", err)
             return None
 
-    def link_push_to_device(self, appliance_id: str, term_id: str) -> dict[str, Any] | None:
+    async def link_push_to_device(self, appliance_id: str, term_id: str) -> dict[str, Any] | None:
         """GET /devices/{id}/settings?term_id=... — links the push term to the fridge."""
         url = device_url(appliance_id, "settings")
         try:
-            response = self._make_request(
+            return await self._make_request(
                 "GET",
                 url,
                 headers=self._get_headers(),
                 params={"term_id": term_id},
                 timeout=30,
             )
-            return response.json()
         except PanasonicAPIError as err:
             _LOGGER.exception("Error linking push term to device: %s", err)
             return None
 
-    def refresh_access_token(self) -> dict[str, Any]:
+    async def refresh_access_token(self) -> dict[str, Any]:
         """Refresh the access token using refresh token."""
         if not self._refresh_token:
             raise PanasonicAuthError("No refresh token available")
@@ -295,26 +306,13 @@ class PanasonicAPI:
             "refresh_token": self._refresh_token,
         }
 
-        try:
-            response = self._session.post(
-                auth0_token_url(), data=data, headers=headers, timeout=30
-            )
-        except requests.exceptions.Timeout as err:
-            raise PanasonicConnectionError(f"Token refresh timed out: {err}") from err
-        except requests.exceptions.ConnectionError as err:
-            raise PanasonicConnectionError(f"Token refresh connection error: {err}") from err
+        token_data = await self._make_request(
+            "POST", auth0_token_url(), data=data, headers=headers, timeout=30
+        )
 
-        if response.status_code in (401, 403):
-            raise PanasonicAuthError(
-                f"Token refresh authentication failed: {response.status_code}"
-            )
+        if not isinstance(token_data, dict):
+            raise PanasonicAuthError("Token refresh returned invalid response format")
 
-        if not response.ok:
-            raise PanasonicRequestError(
-                f"Token refresh failed with HTTP {response.status_code}"
-            )
-
-        token_data = response.json()
         self._access_token = token_data.get("access_token")
         if "refresh_token" in token_data:
             self._refresh_token = token_data.get("refresh_token")

@@ -161,8 +161,7 @@ class PanasonicSelect(CoordinatorEntity[PanasonicDataUpdateCoordinator], SelectE
     async def async_select_option(self, option: str) -> None:
         """Send selected option to the fridge or update local state."""
         if self.entity_description.status_key:
-            await self.hass.async_add_executor_job(
-                self.coordinator.api.control_device,
+            await self.coordinator.api.control_device(
                 self.coordinator.appliance_id,
                 {self.entity_description.status_key: option},
             )
