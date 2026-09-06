@@ -7,14 +7,13 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from .const import ATTR_APPLIANCE_ID, ATTR_PRODUCT_CODE, DOMAIN
 from .coordinator import PanasonicDataUpdateCoordinator
 from .data import PanasonicDataStore
+from .entity import PanasonicEntity
 from .utils import is_fridge_eoj
 
 
@@ -42,20 +41,8 @@ async def async_setup_entry(
     async_add_entities(sensors)
 
 
-class PanasonicSensor(CoordinatorEntity[PanasonicDataUpdateCoordinator], SensorEntity):
+class PanasonicSensor(PanasonicEntity, SensorEntity):
     """Base class for Panasonic sensors."""
-
-    _attr_has_entity_name = True
-
-    def __init__(self, coordinator: PanasonicDataUpdateCoordinator) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator)
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, coordinator.appliance_id)},
-            name=f"Panasonic Fridge ({coordinator.product_code})",
-            manufacturer="Panasonic",
-            model=coordinator.product_code,
-        )
 
     @property
     def extra_state_attributes(self) -> dict[str, str]:

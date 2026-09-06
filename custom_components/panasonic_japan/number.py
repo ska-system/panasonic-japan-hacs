@@ -13,13 +13,12 @@ from homeassistant.components.number import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory, UnitOfTime
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import PanasonicDataUpdateCoordinator
 from .data import PanasonicDataStore
+from .entity import PanasonicEntity
 from .utils import is_fridge_eoj
 
 _LOGGER = logging.getLogger(__name__)
@@ -34,6 +33,8 @@ class PanasonicNumberDescription(NumberEntityDescription):
     native_unit_of_measurement: str | None = None
     mode: NumberMode = NumberMode.AUTO
     entity_category: EntityCategory | None = None
+    max_value_fn: Any | None = None
+    min_value_fn: Any | None = None
 
 
 NUMBERS: tuple[PanasonicNumberDescription, ...] = (
@@ -53,7 +54,7 @@ NUMBERS: tuple[PanasonicNumberDescription, ...] = (
         translation_key="cooling_assist_second",
         icon="mdi:timer-sand",
         native_min_value=0,
-        native_max_value=59,
+        native_max_value=50,
         native_step=10,
         native_unit_of_measurement=UnitOfTime.SECONDS,
         entity_category=EntityCategory.CONFIG,
@@ -64,9 +65,9 @@ NUMBERS: tuple[PanasonicNumberDescription, ...] = (
         translation_key="notify_door_open_time",
         icon="mdi:timer-alert",
         native_min_value=0,
-        native_max_value=72,
+        native_max_value=5,
         native_step=1,
-        native_unit_of_measurement=UnitOfTime.HOURS,
+        native_unit_of_measurement=UnitOfTime.MINUTES,
         entity_category=EntityCategory.CONFIG,
         mode=NumberMode.BOX,
     ),
@@ -78,23 +79,24 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up Panasonic Japan numbers from a config entry."""
+    """Set up Panasonic Japan number platform."""
     coordinators = PanasonicDataStore.get(hass).get_coordinators(entry.entry_id)
 
     entities = []
     for coordinator in coordinators.values():
         if is_fridge_eoj(coordinator.eoj):
             for description in NUMBERS:
-                entities.append(PanasonicNumber(coordinator, description, entry.entry_id))
+                entities.append(
+                    PanasonicNumber(coordinator, description, entry.entry_id)
+                )
 
     async_add_entities(entities)
 
 
-class PanasonicNumber(CoordinatorEntity[PanasonicDataUpdateCoordinator], NumberEntity):
-    """A number setting for the Panasonic fridge."""
+class PanasonicNumber(PanasonicEntity, NumberEntity):
+    """Representation of a Panasonic Number entity."""
 
     entity_description: PanasonicNumberDescription
-    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -111,12 +113,6 @@ class PanasonicNumber(CoordinatorEntity[PanasonicDataUpdateCoordinator], NumberE
         if description.entity_category:
             self._attr_entity_category = description.entity_category
 
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, coordinator.appliance_id)},
-            name=f"Panasonic Fridge ({coordinator.product_code})",
-            manufacturer="Panasonic",
-            model=coordinator.product_code,
-        )
         self._attr_native_value = 0
 
     async def async_added_to_hass(self) -> None:

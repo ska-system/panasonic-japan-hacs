@@ -9,13 +9,12 @@ from homeassistant.components.switch import SwitchEntity, SwitchEntityDescriptio
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import PanasonicDataUpdateCoordinator
 from .data import PanasonicDataStore
+from .entity import PanasonicEntity
 from .utils import is_fridge_eoj
 
 _LOGGER = logging.getLogger(__name__)
@@ -127,11 +126,10 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class PanasonicSwitch(CoordinatorEntity[PanasonicDataUpdateCoordinator], SwitchEntity):
+class PanasonicSwitch(PanasonicEntity, SwitchEntity):
     """A controllable boolean switch on the Panasonic fridge."""
 
     entity_description: PanasonicSwitchDescription
-    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -142,12 +140,8 @@ class PanasonicSwitch(CoordinatorEntity[PanasonicDataUpdateCoordinator], SwitchE
         super().__init__(coordinator)
         self.entity_description = description
         self._attr_unique_id = f"{coordinator.appliance_id}_{description.key}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, coordinator.appliance_id)},
-            name=f"Panasonic Fridge ({coordinator.product_code})",
-            manufacturer="Panasonic",
-            model=coordinator.product_code,
-        )
+        if description.entity_category:
+            self._attr_entity_category = description.entity_category
 
     @property
     def is_on(self) -> bool | None:

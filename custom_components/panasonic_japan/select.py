@@ -8,13 +8,12 @@ from homeassistant.components.select import SelectEntity, SelectEntityDescriptio
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import PanasonicDataUpdateCoordinator
 from .data import PanasonicDataStore
+from .entity import PanasonicEntity
 from .utils import is_fridge_eoj
 
 _LOGGER = logging.getLogger(__name__)
@@ -23,8 +22,11 @@ _LOGGER = logging.getLogger(__name__)
 @dataclass(frozen=True)
 class PanasonicSelectDescription(SelectEntityDescription):
     """Describe a Panasonic fridge select entity."""
-    status_key: str = ""
+
+    status_key: str | None = None
     options: list[str] = field(default_factory=list)
+    options_map: dict[str, str] = field(default_factory=dict)
+    reverse_map: dict[str, str] = field(default_factory=dict)
     entity_category: EntityCategory | None = None
 
 
@@ -79,11 +81,43 @@ SELECTS: tuple[PanasonicSelectDescription, ...] = (
         options=["off", "dark", "bright"],
     ),
     PanasonicSelectDescription(
+        key="ice_making_mode",
+        translation_key="ice_making_mode",
+        icon="mdi:cube-outline",
+        status_key="ice_making_mode",
+        options=["quick", "stop", "normal"],
+        options_map={"quick": "quick", "stop": "stop", "normal": "normal"},
+        reverse_map={"quick": "quick", "stop": "stop", "normal": "normal"},
+        entity_category=EntityCategory.CONFIG,
+    ),
+    PanasonicSelectDescription(
+        key="nanoex",
+        translation_key="nanoex",
+        icon="mdi:air-filter",
+        status_key="nanoex",
+        options=["on", "off", "clean"],
+        options_map={"on": "on", "off": "off", "clean": "clean"},
+        reverse_map={"on": "on", "off": "off", "clean": "clean"},
+        entity_category=EntityCategory.CONFIG,
+    ),
+    PanasonicSelectDescription(
         key="cooling_assist_mode",
         translation_key="cooling_assist_mode",
         icon="mdi:snowflake",
-        status_key="",
         options=["off", "quench", "cold", "frozen"],
+        options_map={
+            "off": "off",
+            "quench": "quench",
+            "cold": "cold",
+            "frozen": "frozen",
+        },
+        reverse_map={
+            "off": "off",
+            "quench": "quench",
+            "cold": "cold",
+            "frozen": "frozen",
+        },
+        status_key=None,  # Not directly backed by device_status, manages UI card state
         entity_category=EntityCategory.CONFIG,
     ),
 )
@@ -94,7 +128,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up Panasonic Japan selects from a config entry."""
+    """Set up Panasonic Japan select platform."""
     coordinators = PanasonicDataStore.get(hass).get_coordinators(entry.entry_id)
 
     entities = []
@@ -111,11 +145,10 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class PanasonicSelect(CoordinatorEntity[PanasonicDataUpdateCoordinator], SelectEntity):
+class PanasonicSelect(PanasonicEntity, SelectEntity):
     """A mode selector for the Panasonic fridge."""
 
     entity_description: PanasonicSelectDescription
-    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -131,12 +164,6 @@ class PanasonicSelect(CoordinatorEntity[PanasonicDataUpdateCoordinator], SelectE
         self._attr_options = description.options
         if description.entity_category:
             self._attr_entity_category = description.entity_category
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, coordinator.appliance_id)},
-            name=f"Panasonic Fridge ({coordinator.product_code})",
-            manufacturer="Panasonic",
-            model=coordinator.product_code,
-        )
         if not description.status_key and description.options:
             self._attr_current_option = description.options[0]
 
