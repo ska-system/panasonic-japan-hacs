@@ -57,7 +57,7 @@ class PanasonicSensor(PanasonicEntity, SensorEntity):
 class PanasonicCostReductionSensor(PanasonicSensor):
     """Sensor for electricity cost reduction."""
 
-    _attr_name = "Electricity Cost Reduction"
+    _attr_translation_key = "electricity_cost_reduction"
     _attr_native_unit_of_measurement = "yen"
     _attr_icon = "mdi:currency-jpy"
     _attr_state_class = SensorStateClass.MEASUREMENT
@@ -96,7 +96,7 @@ class PanasonicCostReductionSensor(PanasonicSensor):
 class PanasonicOperationModeSensor(PanasonicSensor):
     """Sensor for operation mode."""
 
-    _attr_name = "Operation Mode"
+    _attr_translation_key = "operation_mode"
     _attr_icon = "mdi:air-conditioner"
 
     def __init__(self, coordinator: PanasonicDataUpdateCoordinator) -> None:
@@ -131,7 +131,7 @@ class PanasonicOperationModeSensor(PanasonicSensor):
 class PanasonicFirmwareSensor(PanasonicSensor):
     """Sensor for firmware version."""
 
-    _attr_name = "Firmware Version"
+    _attr_translation_key = "firmware_version"
     _attr_icon = "mdi:chip"
 
     def __init__(self, coordinator: PanasonicDataUpdateCoordinator) -> None:
@@ -164,7 +164,7 @@ class PanasonicFirmwareSensor(PanasonicSensor):
 class PanasonicCoolovenStateSensor(PanasonicSensor):
     """Representation of a Panasonic Cooloven State Sensor."""
 
-    _attr_name = "Cooloven State"
+    _attr_translation_key = "cooloven_state"
     _attr_icon = "mdi:fire"
 
     def __init__(self, coordinator: PanasonicDataUpdateCoordinator) -> None:
@@ -182,7 +182,6 @@ class PanasonicCoolovenStateSensor(PanasonicSensor):
 class PanasonicDoorOpenSensor(PanasonicSensor):
     """Sensor for door open count."""
 
-    _attr_name = "Door Open Count"
     _attr_icon = "mdi:door-open"
     _attr_translation_key = "door_open_count"
     _attr_state_class = SensorStateClass.MEASUREMENT

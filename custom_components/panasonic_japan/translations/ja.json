@@ -40,7 +40,7 @@
       "invalid_token": "アクセストークンが無効か、期限切れです",
       "no_fridge_found": "アカウント内に冷蔵庫デバイスが見つかりませんでした",
       "unknown": "予期しないエラーが発生しました"
-      },
+    },
     "abort": {
       "already_configured": "このアカウントは既に設定済みです"
     }
@@ -117,6 +117,22 @@
           "bright": "明"
         }
       },
+      "ice_making_mode": {
+        "name": "製氷モード",
+        "state": {
+          "quick": "速氷",
+          "stop": "停止",
+          "normal": "通常"
+        }
+      },
+      "nanoex": {
+        "name": "ナノイーX",
+        "state": {
+          "on": "入",
+          "off": "切",
+          "clean": "クリーン"
+        }
+      },
       "cooling_assist_mode": {
         "name": "クーリングアシスト モード",
         "state": {
@@ -128,6 +144,18 @@
       }
     },
     "sensor": {
+      "electricity_cost_reduction": {
+        "name": "電気代削減額"
+      },
+      "operation_mode": {
+        "name": "運転モード"
+      },
+      "firmware_version": {
+        "name": "ファームウェアバージョン"
+      },
+      "cooloven_state": {
+        "name": "クーリングアシスト状態"
+      },
       "door_open_count": {
         "name": "ドア開閉回数",
         "unit_of_measurement": "回"
@@ -156,6 +184,9 @@
       "stop_ice_status": {
         "name": "製氷停止"
       },
+      "fresh_frozen_status": {
+        "name": "新鮮凍結"
+      },
       "econavi_lamp_status": {
         "name": "「エコナビ」ランプ表示"
       },
@@ -181,7 +212,7 @@
     "mode": "モード:",
     "off": "切る",
     "quench": "冷ます",
-    "cold": "急冷" ,
+    "cold": "急冷",
     "frozen": "急凍",
     "time": "時間 (分):",
     "second": "秒:",
