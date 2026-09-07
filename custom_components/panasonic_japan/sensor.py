@@ -12,18 +12,18 @@ from homeassistant.util import dt as dt_util
 
 from .const import ATTR_APPLIANCE_ID, ATTR_PRODUCT_CODE, DOMAIN
 from .coordinator import PanasonicDataUpdateCoordinator
-from .data import PanasonicDataStore
+from .data import PanasonicConfigEntry
 from .entity import PanasonicEntity
 from .utils import is_fridge_eoj
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: PanasonicConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Panasonic Japan sensors from a config entry."""
-    coordinators = PanasonicDataStore.get(hass).get_coordinators(entry.entry_id)
+    coordinators = entry.runtime_data.coordinators
 
     sensors = []
     for coordinator in coordinators.values():

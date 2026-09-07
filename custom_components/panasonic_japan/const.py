@@ -73,9 +73,6 @@ PLATFORMS: list[Platform] = [
     Platform.CLIMATE,
 ]
 
-# Pushハンドラー格納用のデータキー
-_PUSH_KEY = f"{DOMAIN}_push"
-
 # EOJごとの種別名称マッピング
 EOJ_NAME_MAP = {
     EOJ_FRIDGE: "Fridge",

@@ -4,7 +4,6 @@ from __future__ import annotations
 import logging
 
 from homeassistant.components.http import StaticPathConfig
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ACCESS_TOKEN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
@@ -13,7 +12,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .api import PanasonicAPI
 from .const import DOMAIN, EOJ_NAME_MAP, PLATFORMS
 from .coordinator import PanasonicDataUpdateCoordinator
-from .data import PanasonicDataStore, PanasonicPushStore
+from .data import PanasonicConfigEntry, PanasonicData
 from .push import PanasonicPushHandler
 from .services import async_register_services, async_unregister_services
 from .utils import normalize_eoj
@@ -21,7 +20,7 @@ from .utils import normalize_eoj
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: PanasonicConfigEntry) -> bool:
     """Set up Panasonic Japan from a config entry."""
     appliances = entry.data.get("appliances", [])
     _LOGGER.debug("Appliances in entry data: %s", appliances)
@@ -36,12 +35,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         refresh_token=entry.data.get("refresh_token"),
     )
 
-    store = PanasonicDataStore.get(hass)
-    store.init_entry(entry.entry_id)
-
+    push_handler: PanasonicPushHandler | None = None
     if appliances:
         push_handler = PanasonicPushHandler(hass, api, entry)
-        PanasonicPushStore.get(hass).set_handler(entry.entry_id, push_handler)
         await push_handler.async_start()
 
     coordinators: dict[str, PanasonicDataUpdateCoordinator] = {}
@@ -66,7 +62,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         coordinator = PanasonicDataUpdateCoordinator(hass, entry, appliance_info, api)
         await coordinator.async_config_entry_first_refresh()
 
-        store.set_coordinator(entry.entry_id, appliance_id, coordinator)
         coordinators[appliance_id] = coordinator
 
         eoj_upper = normalize_eoj(coordinator.eoj or appliance_info.get("eoj"))
@@ -83,7 +78,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             model=resolved_product_code,
         )
 
-    async_register_services(hass, coordinators)
+    entry.runtime_data = PanasonicData(
+        api=api,
+        coordinators=coordinators,
+        push_handler=push_handler,
+    )
+
+    async_register_services(hass)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -103,22 +104,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: PanasonicConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        store = PanasonicDataStore.get(hass)
-        store.remove_entry(entry.entry_id)
-        if not store.has_entries():
-            hass.data.pop(DOMAIN, None)
+        if entry.runtime_data.push_handler:
+            await entry.runtime_data.push_handler.async_stop()
+        if not hass.config_entries.async_loaded_entries(DOMAIN):
             async_unregister_services(hass)
-
-        push_store = PanasonicPushStore.get(hass)
-        push_handler = push_store.remove_handler(entry.entry_id)
-        if push_handler:
-            await push_handler.async_stop()
-        if not push_store.has_handlers():
-            from .const import _PUSH_KEY
-            hass.data.pop(_PUSH_KEY, None)
 
     return unload_ok

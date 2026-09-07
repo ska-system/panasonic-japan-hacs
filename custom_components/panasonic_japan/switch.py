@@ -13,7 +13,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import PanasonicDataUpdateCoordinator
-from .data import PanasonicDataStore
+from .data import PanasonicConfigEntry
 from .entity import PanasonicEntity
 from .utils import is_fridge_eoj
 
@@ -97,11 +97,11 @@ SWITCHES: tuple[PanasonicSwitchDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: PanasonicConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Panasonic Japan switches from a config entry."""
-    coordinators = PanasonicDataStore.get(hass).get_coordinators(entry.entry_id)
+    coordinators = entry.runtime_data.coordinators
 
     entities = []
     for coordinator in coordinators.values():

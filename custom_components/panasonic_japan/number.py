@@ -10,14 +10,13 @@ from homeassistant.components.number import (
     NumberEntityDescription,
     NumberMode,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import PanasonicDataUpdateCoordinator
-from .data import PanasonicDataStore
+from .data import EntryCustomData, PanasonicConfigEntry
 from .entity import PanasonicEntity
 from .utils import is_fridge_eoj
 
@@ -76,18 +75,19 @@ NUMBERS: tuple[PanasonicNumberDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: PanasonicConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Panasonic Japan number platform."""
-    coordinators = PanasonicDataStore.get(hass).get_coordinators(entry.entry_id)
+    coordinators = entry.runtime_data.coordinators
+    custom_data = entry.runtime_data.custom
 
     entities = []
     for coordinator in coordinators.values():
         if is_fridge_eoj(coordinator.eoj):
             for description in NUMBERS:
                 entities.append(
-                    PanasonicNumber(coordinator, description, entry.entry_id)
+                    PanasonicNumber(coordinator, description, custom_data)
                 )
 
     async_add_entities(entities)
@@ -102,12 +102,12 @@ class PanasonicNumber(PanasonicEntity, NumberEntity):
         self,
         coordinator: PanasonicDataUpdateCoordinator,
         description: PanasonicNumberDescription,
-        entry_id: str,
+        custom_data: EntryCustomData,
     ) -> None:
         """Initialize."""
         super().__init__(coordinator)
         self.entity_description = description
-        self._entry_id = entry_id
+        self._custom_data = custom_data
         self._attr_unique_id = f"{coordinator.appliance_id}_{description.key}"
         self._attr_native_step = description.native_step
         if description.entity_category:
@@ -118,12 +118,11 @@ class PanasonicNumber(PanasonicEntity, NumberEntity):
     async def async_added_to_hass(self) -> None:
         """Run when entity about to be added to hass."""
         await super().async_added_to_hass()
-        custom_data = PanasonicDataStore.get(self.hass).get_custom(self._entry_id)
-        custom_data.number_entities[self.entity_description.key] = self
+        self._custom_data.number_entities[self.entity_description.key] = self
 
     def _get_current_mode(self) -> str:
         """Get current cooling assist mode."""
-        return PanasonicDataStore.get(self.hass).get_custom(self._entry_id).cooling_assist_mode
+        return self._custom_data.cooling_assist_mode
 
     @property
     def native_min_value(self) -> float:

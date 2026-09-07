@@ -6,7 +6,7 @@ import logging
 from homeassistant.core import HomeAssistant, ServiceCall
 
 from .const import DOMAIN
-from .data import PanasonicDataStore
+from .data import PanasonicConfigEntry
 from .utils import is_fridge_eoj
 
 _LOGGER = logging.getLogger(__name__)
@@ -26,20 +26,20 @@ async def handle_set_cooloven(hass: HomeAssistant, call: ServiceCall) -> None:
         payload["cooloven_time"] = int(time_min or 0)
         payload["cooloven_second"] = int(time_sec or 0)
 
-    store = PanasonicDataStore.get(hass)
-    for coordinator in store.iter_fridge_coordinators(target_appliance_id):
-        await coordinator.api.control_device(
-            coordinator.appliance_id,
-            payload,
-        )
-        await coordinator.async_request_refresh()
+    entries: list[PanasonicConfigEntry] = hass.config_entries.async_loaded_entries(DOMAIN)
+    for entry in entries:
+        for coordinator in entry.runtime_data.coordinators.values():
+            if is_fridge_eoj(coordinator.eoj):
+                if not target_appliance_id or coordinator.appliance_id == target_appliance_id:
+                    await coordinator.api.control_device(
+                        coordinator.appliance_id,
+                        payload,
+                    )
+                    await coordinator.async_request_refresh()
 
 
-def async_register_services(hass: HomeAssistant, coordinators: dict) -> None:
+def async_register_services(hass: HomeAssistant) -> None:
     """Register integration-level services when supported devices are present."""
-    if not any(is_fridge_eoj(c.eoj) for c in coordinators.values()):
-        return
-
     if hass.services.has_service(DOMAIN, SERVICE_SET_COOLOVEN):
         return
 

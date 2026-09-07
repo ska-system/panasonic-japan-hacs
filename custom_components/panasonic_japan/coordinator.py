@@ -4,6 +4,8 @@ from __future__ import annotations
 import logging
 from datetime import timedelta
 
+from typing import TYPE_CHECKING
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -17,6 +19,9 @@ from .api import (
 from .const import DEFAULT_SCAN_INTERVAL, DOMAIN
 from .handlers import APIHandlerFactory
 
+if TYPE_CHECKING:
+    from .data import PanasonicConfigEntry
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -26,7 +31,7 @@ class PanasonicDataUpdateCoordinator(DataUpdateCoordinator):
     def __init__(
         self,
         hass: HomeAssistant,
-        config_entry: ConfigEntry,
+        config_entry: PanasonicConfigEntry,
         appliance_info: dict,
         api: PanasonicAPI,
     ) -> None:

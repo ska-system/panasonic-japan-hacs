@@ -12,7 +12,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import PanasonicDataUpdateCoordinator
-from .data import PanasonicDataStore
+from .data import EntryCustomData, PanasonicConfigEntry
 from .entity import PanasonicEntity
 from .utils import is_fridge_eoj
 
@@ -125,11 +125,12 @@ SELECTS: tuple[PanasonicSelectDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: PanasonicConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Panasonic Japan select platform."""
-    coordinators = PanasonicDataStore.get(hass).get_coordinators(entry.entry_id)
+    coordinators = entry.runtime_data.coordinators
+    custom_data = entry.runtime_data.custom
 
     entities = []
     for coordinator in coordinators.values():
@@ -138,9 +139,9 @@ async def async_setup_entry(
             for description in SELECTS:
                 if description.status_key:
                     if description.status_key in device_status:
-                        entities.append(PanasonicSelect(coordinator, description, entry.entry_id))
+                        entities.append(PanasonicSelect(coordinator, description, custom_data))
                 else:
-                    entities.append(PanasonicSelect(coordinator, description, entry.entry_id))
+                    entities.append(PanasonicSelect(coordinator, description, custom_data))
 
     async_add_entities(entities)
 
@@ -154,12 +155,12 @@ class PanasonicSelect(PanasonicEntity, SelectEntity):
         self,
         coordinator: PanasonicDataUpdateCoordinator,
         description: PanasonicSelectDescription,
-        entry_id: str,
+        custom_data: EntryCustomData,
     ) -> None:
         """Initialize."""
         super().__init__(coordinator)
         self.entity_description = description
-        self._entry_id = entry_id
+        self._custom_data = custom_data
         self._attr_unique_id = f"{coordinator.appliance_id}_{description.key}"
         self._attr_options = description.options
         if description.entity_category:
@@ -171,8 +172,7 @@ class PanasonicSelect(PanasonicEntity, SelectEntity):
         """Run when entity about to be added to hass."""
         await super().async_added_to_hass()
         if not self.entity_description.status_key and self.entity_description.key == "cooling_assist_mode":
-            custom_data = PanasonicDataStore.get(self.hass).get_custom(self._entry_id)
-            custom_data.cooling_assist_mode = self._attr_current_option
+            self._custom_data.cooling_assist_mode = self._attr_current_option
 
     @property
     def current_option(self) -> str | None:
@@ -197,10 +197,9 @@ class PanasonicSelect(PanasonicEntity, SelectEntity):
             self._attr_current_option = option
             
             if self.entity_description.key == "cooling_assist_mode":
-                custom_data = PanasonicDataStore.get(self.hass).get_custom(self._entry_id)
-                custom_data.cooling_assist_mode = option
+                self._custom_data.cooling_assist_mode = option
 
-                number_entities = custom_data.number_entities
+                number_entities = self._custom_data.number_entities
                 time_ent = number_entities.get("cooling_assist_time")
                 sec_ent = number_entities.get("cooling_assist_second")
 
