@@ -291,7 +291,7 @@ class PanasonicAPI:
             return None
 
     async def refresh_access_token(self) -> dict[str, Any]:
-        """Refresh the access token using refresh token."""
+        """Refresh the access token using refresh token with robust error handling."""
         if not self._refresh_token:
             raise PanasonicAuthError("No refresh token available")
 
@@ -306,9 +306,14 @@ class PanasonicAPI:
             "refresh_token": self._refresh_token,
         }
 
-        token_data = await self._make_request(
-            "POST", auth0_token_url(), data=data, headers=headers, timeout=30
-        )
+        try:
+            token_data = await self._make_request(
+                "POST", auth0_token_url(), data=data, headers=headers, timeout=30
+            )
+        except PanasonicConnectionError as err:
+            raise PanasonicConnectionError(f"Network error during token refresh: {err}") from err
+        except PanasonicRequestError as err:
+            raise PanasonicAuthError(f"Token refresh rejected by Auth0: {err}") from err
 
         if not isinstance(token_data, dict):
             raise PanasonicAuthError("Token refresh returned invalid response format")

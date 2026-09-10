@@ -100,9 +100,12 @@ class PanasonicDataUpdateCoordinator(DataUpdateCoordinator):
         return data
 
     async def _async_update_data(self) -> dict:
-        """Fetch data from Panasonic API."""
+        """Fetch data from Panasonic API with safe token validation and retry."""
         try:
             await self.api.ensure_token_valid()
+        except PanasonicConnectionError as err:
+            self.api.handle_connection_error()
+            raise UpdateFailed(f"Network error during token check (will retry): {err}") from err
         except PanasonicAuthError:
             if not await self._async_refresh_and_persist():
                 raise UpdateFailed(
