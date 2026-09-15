@@ -16,26 +16,19 @@ SERVICE_SET_COOLOVEN = "set_cooloven"
 
 async def handle_set_cooloven(hass: HomeAssistant, call: ServiceCall) -> None:
     """Handle cooloven service call dynamically for target devices."""
-    mode = call.data.get("mode")
+    mode = call.data.get("mode", "off")
     time_min = call.data.get("time", 0)
     time_sec = call.data.get("second", 0)
     target_appliance_id = call.data.get("appliance_id")
-
-    payload = {"cooloven_mode": mode}
-    if mode != "off":
-        payload["cooloven_time"] = int(time_min or 0)
-        payload["cooloven_second"] = int(time_sec or 0)
 
     entries: list[PanasonicConfigEntry] = hass.config_entries.async_loaded_entries(DOMAIN)
     for entry in entries:
         for coordinator in entry.runtime_data.coordinators.values():
             if is_fridge_eoj(coordinator.eoj):
                 if not target_appliance_id or coordinator.appliance_id == target_appliance_id:
-                    await coordinator.api.control_device(
-                        coordinator.appliance_id,
-                        payload,
+                    await coordinator.async_control_cooling_assist(
+                        mode, time_min, time_sec
                     )
-                    await coordinator.async_request_refresh()
 
 
 def async_register_services(hass: HomeAssistant) -> None:

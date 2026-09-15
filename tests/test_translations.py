@@ -72,10 +72,6 @@ def test_translation_keys_alignment():
 
 def test_no_hardcoded_entity_names(mock_coordinator):
     """Verify that entity instances do not have hardcoded string _attr_name and have has_entity_name=True."""
-    custom_data = MagicMock()
-    custom_data.number_entities = {}
-    custom_data.cooling_assist_mode = "off"
-
     entities = [
         PanasonicCostReductionSensor(mock_coordinator),
         PanasonicOperationModeSensor(mock_coordinator),
@@ -90,10 +86,10 @@ def test_no_hardcoded_entity_names(mock_coordinator):
         entities.append(PanasonicSwitch(mock_coordinator, switch_desc))
 
     for select_desc in SELECTS:
-        entities.append(PanasonicSelect(mock_coordinator, select_desc, custom_data))
+        entities.append(PanasonicSelect(mock_coordinator, select_desc))
 
     for number_desc in NUMBERS:
-        entities.append(PanasonicNumber(mock_coordinator, number_desc, custom_data))
+        entities.append(PanasonicNumber(mock_coordinator, number_desc))
 
     for entity in entities:
         assert entity.has_entity_name is True, f"{entity} has has_entity_name != True"
@@ -107,10 +103,6 @@ def test_entity_translation_keys_exist_in_strings(mock_coordinator):
     entity_strings = strings.get("entity", {})
     ja_strings = load_json(COMPONENT_PATH / "translations" / "ja.json").get("entity", {})
     en_strings = load_json(COMPONENT_PATH / "translations" / "en.json").get("entity", {})
-
-    custom_data = MagicMock()
-    custom_data.number_entities = {}
-    custom_data.cooling_assist_mode = "off"
 
     # 1. Sensors
     sensor_entities = [
@@ -140,7 +132,7 @@ def test_entity_translation_keys_exist_in_strings(mock_coordinator):
 
     # 3. Selects
     for select_desc in SELECTS:
-        entity = PanasonicSelect(mock_coordinator, select_desc, custom_data)
+        entity = PanasonicSelect(mock_coordinator, select_desc)
         key = entity.translation_key
         assert key is not None, f"Select {select_desc.key} has no translation_key"
         for dict_name, d in [("strings", entity_strings), ("ja", ja_strings), ("en", en_strings)]:
@@ -150,7 +142,7 @@ def test_entity_translation_keys_exist_in_strings(mock_coordinator):
 
     # 4. Numbers
     for num_desc in NUMBERS:
-        entity = PanasonicNumber(mock_coordinator, num_desc, custom_data)
+        entity = PanasonicNumber(mock_coordinator, num_desc)
         key = entity.translation_key
         assert key is not None, f"Number {num_desc.key} has no translation_key"
         for dict_name, d in [("strings", entity_strings), ("ja", ja_strings), ("en", en_strings)]:

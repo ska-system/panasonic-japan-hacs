@@ -10,13 +10,14 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_platform, config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from .cooling_assist import get_default_cooling_assist_time
 from .coordinator import PanasonicDataUpdateCoordinator
 from .data import PanasonicConfigEntry
 from .entity import PanasonicEntity
 from .utils import is_fridge_eoj
 
 DEFAULT_TEMPERATURE = 4.0
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -33,7 +34,7 @@ async def async_setup_entry(
 
     async_add_entities(entities)
 
-    # エンティティ固有のサービスを登録
+    # Register entity-level cooling_assist service
     platform = entity_platform.async_get_current_platform()
     platform.async_register_entity_service(
         "cooling_assist",
@@ -52,9 +53,7 @@ class PanasonicClimate(PanasonicEntity, ClimateEntity):
     _attr_name = None
     _attr_icon = "mdi:fridge-outline"
     _attr_translation_key = "panasonic_fridge"
-    _attr_supported_features = (
-        ClimateEntityFeature.PRESET_MODE
-    )
+    _attr_supported_features = ClimateEntityFeature.PRESET_MODE
     _attr_hvac_modes = [HVACMode.AUTO]
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_preset_modes = ["off", "quench", "cold", "frozen"]
@@ -83,40 +82,13 @@ class PanasonicClimate(PanasonicEntity, ClimateEntity):
         }
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
-        """Set new preset mode by calling the set_cooloven service."""
-        service_data = {
-            "mode": preset_mode,
-            "appliance_id": self.coordinator.appliance_id,
-        }
-        if preset_mode == "quench":
-            service_data["time"] = 5
-            service_data["second"] = 0
-        elif preset_mode == "cold":
-            service_data["time"] = 15
-        elif preset_mode in ("freeze", "frozen"):
-            service_data["time"] = 45
-
-        await self.hass.services.async_call(
-            DOMAIN,
-            "set_cooloven",
-            service_data,
-            blocking=True,
-        )
+        """Set new preset mode for cooling assist."""
+        if preset_mode == "off":
+            await self.coordinator.async_control_cooling_assist("off", 0, 0)
+        else:
+            time_val, sec_val = get_default_cooling_assist_time(preset_mode)
+            await self.coordinator.async_control_cooling_assist(preset_mode, time_val, sec_val)
 
     async def async_cooling_assist(self, mode: str, time: int = 0, second: int = 0) -> None:
-        """Execute cooling assist by calling the set_cooloven service."""
-        service_data = {
-            "mode": mode,
-            "appliance_id": self.coordinator.appliance_id,
-        }
-        if mode != "off":
-            service_data["time"] = time
-        if mode == "quench":
-            service_data["second"] = second
-
-        await self.hass.services.async_call(
-            DOMAIN,
-            "set_cooloven",
-            service_data,
-            blocking=True,
-        )
+        """Execute cooling assist directly via coordinator."""
+        await self.coordinator.async_control_cooling_assist(mode, time, second)

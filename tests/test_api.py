@@ -71,14 +71,17 @@ async def test_control_device_success():
     assert result == {"result": "ok"}
 
 
+from homeassistant.exceptions import ConfigEntryAuthFailed
+
+
 async def test_make_request_unauthorized():
-    """401エラー時に PanasonicAuthError が送出されることを検証する。"""
+    """401エラー時に ConfigEntryAuthFailed が送出されることを検証する。"""
     mock_resp = MockClientResponse(status=401)
     session = create_mock_session(mock_resp)
 
     api = PanasonicAPI(session=session, access_token="expired_token")
 
-    with pytest.raises(PanasonicAuthError) as excinfo:
+    with pytest.raises(ConfigEntryAuthFailed) as excinfo:
         await api.get_user_info()
     assert "Authentication failed: 401" in str(excinfo.value)
 

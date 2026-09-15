@@ -13,21 +13,12 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class EntryCustomData:
-    """Per-config-entry custom entity state shared across platforms."""
-
-    cooling_assist_mode: str = "off"
-    number_entities: dict = field(default_factory=dict)
-
-
-@dataclass
 class PanasonicData:
     """Runtime data stored in config_entry.runtime_data."""
 
     api: PanasonicAPI
     coordinators: dict[str, PanasonicDataUpdateCoordinator] = field(default_factory=dict)
     push_handler: PanasonicPushHandler | None = None
-    custom: EntryCustomData = field(default_factory=EntryCustomData)
 
 
 type PanasonicConfigEntry = ConfigEntry[PanasonicData]

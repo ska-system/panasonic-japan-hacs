@@ -4,10 +4,11 @@ from __future__ import annotations
 import logging
 from datetime import timedelta
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import (
@@ -17,6 +18,11 @@ from .api import (
     PanasonicAPIError,
 )
 from .const import DEFAULT_SCAN_INTERVAL, DOMAIN
+from .cooling_assist import (
+    clamp_cooling_assist_values,
+    get_cooling_assist_bounds,
+    get_default_cooling_assist_time,
+)
 from .handlers import APIHandlerFactory
 
 if TYPE_CHECKING:
@@ -45,15 +51,88 @@ class PanasonicDataUpdateCoordinator(DataUpdateCoordinator):
 
         self.handler = APIHandlerFactory.create(self.eoj, self.api)
 
-        self.pending_cooloven_mode = "quench"
-        self.pending_cooloven_time = 0
-        self.pending_cooloven_second = 0
+        # Cooling assist state managed per appliance
+        self.cooling_assist_mode: str = "off"
+        self.cooling_assist_time: int = 0
+        self.cooling_assist_second: int = 0
+        self._cooling_assist_listeners: list[Callable[[], None]] = []
 
         super().__init__(
             hass,
             _LOGGER,
+            config_entry=config_entry,
             name=f"{DOMAIN}_{self.appliance_id}",
             update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
+        )
+
+    def register_cooling_assist_listener(self, listener: Callable[[], None]) -> Callable[[], None]:
+        """Register a listener for cooling assist state changes."""
+        self._cooling_assist_listeners.append(listener)
+
+        def unsubscribe() -> None:
+            if listener in self._cooling_assist_listeners:
+                self._cooling_assist_listeners.remove(listener)
+
+        return unsubscribe
+
+    def _notify_cooling_assist_listeners(self) -> None:
+        """Notify registered listeners of cooling assist changes."""
+        for listener in list(self._cooling_assist_listeners):
+            try:
+                listener()
+            except Exception as err:
+                _LOGGER.warning("Error notifying cooling assist listener: %s", err)
+
+    def set_cooling_assist_mode(self, mode: str) -> None:
+        """Update cooling assist mode and set default duration."""
+        self.cooling_assist_mode = mode
+        def_time, def_sec = get_default_cooling_assist_time(mode)
+        self.cooling_assist_time = def_time
+        self.cooling_assist_second = def_sec
+        self._notify_cooling_assist_listeners()
+
+    def set_cooling_assist_time(self, time_min: int | float) -> None:
+        """Update cooling assist minutes with clamping."""
+        bounds = get_cooling_assist_bounds(self.cooling_assist_mode)
+        self.cooling_assist_time = max(bounds["min_time"], min(bounds["max_time"], int(time_min)))
+        self._notify_cooling_assist_listeners()
+
+    def set_cooling_assist_second(self, time_sec: int | float) -> None:
+        """Update cooling assist seconds with step snapping and clamping."""
+        bounds = get_cooling_assist_bounds(self.cooling_assist_mode)
+        if bounds["max_sec"] > 0:
+            clamped = (round(int(time_sec) / 10)) * 10
+            self.cooling_assist_second = max(bounds["min_sec"], min(bounds["max_sec"], clamped))
+        else:
+            self.cooling_assist_second = 0
+        self._notify_cooling_assist_listeners()
+
+    async def async_control_cooling_assist(
+        self, mode: str, time_min: int | float = 0, time_sec: int | float = 0
+    ) -> None:
+        """Send cooling assist command to the device and refresh status."""
+        clamped_time, clamped_sec = clamp_cooling_assist_values(mode, time_min, time_sec)
+        payload: dict[str, Any] = {"cooloven_mode": mode}
+        if mode != "off":
+            payload["cooloven_time"] = clamped_time
+            payload["cooloven_second"] = clamped_sec
+
+        await self.api.control_device(self.appliance_id, payload)
+        await self.async_request_refresh()
+
+    async def async_execute_cooling_assist(self) -> None:
+        """Execute cooling assist using currently configured settings."""
+        if (
+            self.cooling_assist_mode == "quench"
+            and self.cooling_assist_time == 0
+            and self.cooling_assist_second == 0
+        ):
+            raise HomeAssistantError("Time and seconds cannot both be 0 in quench mode.")
+
+        await self.async_control_cooling_assist(
+            self.cooling_assist_mode,
+            self.cooling_assist_time,
+            self.cooling_assist_second,
         )
 
     async def _async_persist_tokens(self) -> bool:

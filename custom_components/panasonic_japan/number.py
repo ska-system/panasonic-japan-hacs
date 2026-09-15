@@ -14,9 +14,9 @@ from homeassistant.const import EntityCategory, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from .cooling_assist import get_cooling_assist_bounds
 from .coordinator import PanasonicDataUpdateCoordinator
-from .data import EntryCustomData, PanasonicConfigEntry
+from .data import PanasonicConfigEntry
 from .entity import PanasonicEntity
 from .utils import is_fridge_eoj
 
@@ -26,6 +26,7 @@ _LOGGER = logging.getLogger(__name__)
 @dataclass(frozen=True)
 class PanasonicNumberDescription(NumberEntityDescription):
     """Describe a Panasonic fridge number entity."""
+
     native_min_value: int = 0
     native_max_value: int = 59
     native_step: int = 1
@@ -80,15 +81,12 @@ async def async_setup_entry(
 ) -> None:
     """Set up Panasonic Japan number platform."""
     coordinators = entry.runtime_data.coordinators
-    custom_data = entry.runtime_data.custom
 
     entities = []
     for coordinator in coordinators.values():
         if is_fridge_eoj(coordinator.eoj):
             for description in NUMBERS:
-                entities.append(
-                    PanasonicNumber(coordinator, description, custom_data)
-                )
+                entities.append(PanasonicNumber(coordinator, description))
 
     async_add_entities(entities)
 
@@ -102,102 +100,77 @@ class PanasonicNumber(PanasonicEntity, NumberEntity):
         self,
         coordinator: PanasonicDataUpdateCoordinator,
         description: PanasonicNumberDescription,
-        custom_data: EntryCustomData,
     ) -> None:
         """Initialize."""
         super().__init__(coordinator)
         self.entity_description = description
-        self._custom_data = custom_data
         self._attr_unique_id = f"{coordinator.appliance_id}_{description.key}"
         self._attr_native_step = description.native_step
         if description.entity_category:
             self._attr_entity_category = description.entity_category
 
-        self._attr_native_value = 0
+        self._attr_native_value = 0.0
 
     async def async_added_to_hass(self) -> None:
         """Run when entity about to be added to hass."""
         await super().async_added_to_hass()
-        self._custom_data.number_entities[self.entity_description.key] = self
-
-    def _get_current_mode(self) -> str:
-        """Get current cooling assist mode."""
-        return self._custom_data.cooling_assist_mode
+        if self.entity_description.key in ("cooling_assist_time", "cooling_assist_second"):
+            self.async_on_remove(
+                self.coordinator.register_cooling_assist_listener(self.async_write_ha_state)
+            )
 
     @property
     def native_min_value(self) -> float:
         """Return dynamic minimum value based on mode."""
         if self.entity_description.key == "notify_door_open_time":
-            return 0
-        mode = self._get_current_mode()
+            return 0.0
+        bounds = get_cooling_assist_bounds(self.coordinator.cooling_assist_mode)
         if self.entity_description.key == "cooling_assist_time":
-            if mode in ("off", "quench"):
-                return 0
-            elif mode == "cold":
-                return 10
-            elif mode in ("frozen", "freeze"):
-                return 30
-        elif self.entity_description.key == "cooling_assist_second":
-            return 0
-        return 0
+            return float(bounds["min_time"])
+        if self.entity_description.key == "cooling_assist_second":
+            return float(bounds["min_sec"])
+        return 0.0
 
     @property
     def native_max_value(self) -> float:
         """Return dynamic maximum value based on mode."""
         if self.entity_description.key == "notify_door_open_time":
-            return 72
-        mode = self._get_current_mode()
+            return 72.0
+        bounds = get_cooling_assist_bounds(self.coordinator.cooling_assist_mode)
         if self.entity_description.key == "cooling_assist_time":
-            if mode == "off":
-                return 0
-            elif mode == "quench":
-                return 10
-            elif mode == "cold":
-                return 30
-            elif mode in ("frozen", "freeze"):
-                return 60
-        elif self.entity_description.key == "cooling_assist_second":
-            if mode in ("cold", "frozen", "freeze", "off"):
-                return 0
-            elif mode == "quench":
-                return 50
-        return 0
+            return float(bounds["max_time"])
+        if self.entity_description.key == "cooling_assist_second":
+            return float(bounds["max_sec"])
+        return 0.0
 
     @property
     def native_step(self) -> float:
         """Return step value."""
         if self.entity_description.key == "cooling_assist_second":
-            return 10
-        return 1
+            return 10.0
+        return 1.0
 
     @property
     def native_value(self) -> float | None:
         """Return current value."""
         if self.entity_description.key == "notify_door_open_time":
             if not self.coordinator.data:
-                return 0
+                return 0.0
             param_list = self.coordinator.data.get("notification_settings", {}).get("param_list", [])
             for item in param_list:
                 if item.get("param_name") == "doorOpenInfo":
                     if "param_time" in item:
-                        return item.get("param_time", 1)
-                    else:
-                        return 0
-            return 0
+                        return float(item.get("param_time", 1))
+                    return 0.0
+            return 0.0
+        if self.entity_description.key == "cooling_assist_time":
+            return float(self.coordinator.cooling_assist_time)
+        if self.entity_description.key == "cooling_assist_second":
+            return float(self.coordinator.cooling_assist_second)
         return self._attr_native_value
 
     async def async_set_native_value(self, value: float) -> None:
-        """Update the current value locally."""
-        min_v = self.native_min_value
-        max_v = self.native_max_value
-        
-        # 値のクランプ処理
-        value = max(min_v, min(int(value), max_v))
-        
-        if self.entity_description.key == "cooling_assist_second":
-            value = (round(value / 10)) * 10
-
-        # ドアモニター設定時間の場合は、スイッチの状態を確認してAPIへ反映
+        """Update the current value."""
         if self.entity_description.key == "notify_door_open_time":
             if not self.coordinator.data:
                 return
@@ -213,7 +186,7 @@ class PanasonicNumber(PanasonicEntity, NumberEntity):
                             item["param_value"] = True
                             item["param_time"] = int(value)
                         break
-            
+
             await self.coordinator.api.update_notification_settings(
                 self.coordinator.appliance_id,
                 current_settings,
@@ -221,5 +194,7 @@ class PanasonicNumber(PanasonicEntity, NumberEntity):
             await self.coordinator.async_request_refresh()
             return
 
-        self._attr_native_value = value
-        self.async_write_ha_state()
+        if self.entity_description.key == "cooling_assist_time":
+            self.coordinator.set_cooling_assist_time(int(value))
+        elif self.entity_description.key == "cooling_assist_second":
+            self.coordinator.set_cooling_assist_second(int(value))

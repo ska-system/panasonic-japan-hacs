@@ -5,14 +5,12 @@ import logging
 from dataclasses import dataclass, field
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
 from .coordinator import PanasonicDataUpdateCoordinator
-from .data import EntryCustomData, PanasonicConfigEntry
+from .data import PanasonicConfigEntry
 from .entity import PanasonicEntity
 from .utils import is_fridge_eoj
 
@@ -117,7 +115,7 @@ SELECTS: tuple[PanasonicSelectDescription, ...] = (
             "cold": "cold",
             "frozen": "frozen",
         },
-        status_key=None,  # Not directly backed by device_status, manages UI card state
+        status_key=None,  # State managed via coordinator cooling_assist_mode
         entity_category=EntityCategory.CONFIG,
     ),
 )
@@ -130,7 +128,6 @@ async def async_setup_entry(
 ) -> None:
     """Set up Panasonic Japan select platform."""
     coordinators = entry.runtime_data.coordinators
-    custom_data = entry.runtime_data.custom
 
     entities = []
     for coordinator in coordinators.values():
@@ -139,9 +136,9 @@ async def async_setup_entry(
             for description in SELECTS:
                 if description.status_key:
                     if description.status_key in device_status:
-                        entities.append(PanasonicSelect(coordinator, description, custom_data))
+                        entities.append(PanasonicSelect(coordinator, description))
                 else:
-                    entities.append(PanasonicSelect(coordinator, description, custom_data))
+                    entities.append(PanasonicSelect(coordinator, description))
 
     async_add_entities(entities)
 
@@ -155,12 +152,10 @@ class PanasonicSelect(PanasonicEntity, SelectEntity):
         self,
         coordinator: PanasonicDataUpdateCoordinator,
         description: PanasonicSelectDescription,
-        custom_data: EntryCustomData,
     ) -> None:
         """Initialize."""
         super().__init__(coordinator)
         self.entity_description = description
-        self._custom_data = custom_data
         self._attr_unique_id = f"{coordinator.appliance_id}_{description.key}"
         self._attr_options = description.options
         if description.entity_category:
@@ -171,8 +166,10 @@ class PanasonicSelect(PanasonicEntity, SelectEntity):
     async def async_added_to_hass(self) -> None:
         """Run when entity about to be added to hass."""
         await super().async_added_to_hass()
-        if not self.entity_description.status_key and self.entity_description.key == "cooling_assist_mode":
-            self._custom_data.cooling_assist_mode = self._attr_current_option
+        if self.entity_description.key == "cooling_assist_mode":
+            self.async_on_remove(
+                self.coordinator.register_cooling_assist_listener(self.async_write_ha_state)
+            )
 
     @property
     def current_option(self) -> str | None:
@@ -183,6 +180,8 @@ class PanasonicSelect(PanasonicEntity, SelectEntity):
             return self.coordinator.data.get("device_status", {}).get(
                 self.entity_description.status_key
             )
+        if self.entity_description.key == "cooling_assist_mode":
+            return self.coordinator.cooling_assist_mode
         return self._attr_current_option
 
     async def async_select_option(self, option: str) -> None:
@@ -193,43 +192,9 @@ class PanasonicSelect(PanasonicEntity, SelectEntity):
                 {self.entity_description.status_key: option},
             )
             await self.coordinator.async_request_refresh()
+        elif self.entity_description.key == "cooling_assist_mode":
+            self.coordinator.set_cooling_assist_mode(option)
+            self.async_write_ha_state()
         else:
             self._attr_current_option = option
-            
-            if self.entity_description.key == "cooling_assist_mode":
-                self._custom_data.cooling_assist_mode = option
-
-                number_entities = self._custom_data.number_entities
-                time_ent = number_entities.get("cooling_assist_time")
-                sec_ent = number_entities.get("cooling_assist_second")
-
-                if option == "off":
-                    if time_ent:
-                        time_ent._attr_native_value = 0.0
-                        time_ent.async_write_ha_state()
-                    if sec_ent:
-                        sec_ent._attr_native_value = 0.0
-                        sec_ent.async_write_ha_state()
-                elif option == "quench":
-                    if time_ent:
-                        time_ent._attr_native_value = 5.0
-                        time_ent.async_write_ha_state()
-                    if sec_ent:
-                        sec_ent._attr_native_value = 0.0
-                        sec_ent.async_write_ha_state()
-                elif option == "cold":
-                    if time_ent:
-                        time_ent._attr_native_value = 15.0
-                        time_ent.async_write_ha_state()
-                    if sec_ent:
-                        sec_ent._attr_native_value = 0.0
-                        sec_ent.async_write_ha_state()
-                elif option in ("frozen", "freeze"):
-                    if time_ent:
-                        time_ent._attr_native_value = 45.0
-                        time_ent.async_write_ha_state()
-                    if sec_ent:
-                        sec_ent._attr_native_value = 0.0
-                        sec_ent.async_write_ha_state()
-
             self.async_write_ha_state()
