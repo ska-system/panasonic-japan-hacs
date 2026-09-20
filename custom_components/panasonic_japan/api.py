@@ -10,7 +10,6 @@ from datetime import datetime
 from typing import Any
 
 import aiohttp
-from homeassistant.exceptions import ConfigEntryAuthFailed
 
 from .const import (
     API_KEY,
@@ -144,8 +143,8 @@ class PanasonicAPI:
         try:
             async with session.request(method, url, timeout=timeout, **kwargs) as response:
                 if response.status in (401, 403):
-                    raise ConfigEntryAuthFailed(
-                        f"Authentication failed: {response.status} - re-authentication required"
+                    raise PanasonicAuthError(
+                        f"Authentication failed: {response.status}"
                     )
 
                 if response.status >= 400:
