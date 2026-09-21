@@ -61,6 +61,7 @@ class PanasonicAPI:
         self._internal_session: aiohttp.ClientSession | None = None
         self._access_token = access_token
         self._refresh_token = refresh_token
+        self._lock = asyncio.Lock()
 
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create an aiohttp ClientSession."""
@@ -292,40 +293,47 @@ class PanasonicAPI:
 
     async def refresh_access_token(self) -> dict[str, Any]:
         """Refresh the access token using refresh token with robust error handling."""
-        if not self._refresh_token:
-            raise PanasonicAuthError("No refresh token available")
+        async with self._lock:
+            if not self.is_token_expiring(margin_seconds=DEFAULT_TOKEN_MARGIN_SECONDS):
+                return {
+                    "access_token": self._access_token,
+                    "refresh_token": self._refresh_token,
+                }
 
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "User-Agent": USER_AGENT,
-        }
+            if not self._refresh_token:
+                raise PanasonicAuthError("No refresh token available")
 
-        data = {
-            "grant_type": "refresh_token",
-            "client_id": AUTH0_CLIENT_ID,
-            "refresh_token": self._refresh_token,
-        }
+            headers = {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "User-Agent": USER_AGENT,
+            }
 
-        try:
-            token_data = await self._make_request(
-                "POST", auth0_token_url(), data=data, headers=headers, timeout=30
-            )
-        except PanasonicConnectionError as err:
-            raise PanasonicConnectionError(f"Network error during token refresh: {err}") from err
-        except PanasonicRequestError as err:
-            raise PanasonicAuthError(f"Token refresh rejected by Auth0: {err}") from err
+            data = {
+                "grant_type": "refresh_token",
+                "client_id": AUTH0_CLIENT_ID,
+                "refresh_token": self._refresh_token,
+            }
 
-        if not isinstance(token_data, dict):
-            raise PanasonicAuthError("Token refresh returned invalid response format")
+            try:
+                token_data = await self._make_request(
+                    "POST", auth0_token_url(), data=data, headers=headers, timeout=30
+                )
+            except PanasonicConnectionError as err:
+                raise PanasonicConnectionError(f"Network error during token refresh: {err}") from err
+            except PanasonicRequestError as err:
+                raise PanasonicAuthError(f"Token refresh rejected by Auth0: {err}") from err
 
-        self._access_token = token_data.get("access_token")
-        if "refresh_token" in token_data:
-            self._refresh_token = token_data.get("refresh_token")
+            if not isinstance(token_data, dict):
+                raise PanasonicAuthError("Token refresh returned invalid response format")
 
-        if not self._access_token:
-            raise PanasonicAuthError("Token refresh returned empty access token")
+            self._access_token = token_data.get("access_token")
+            if "refresh_token" in token_data:
+                self._refresh_token = token_data.get("refresh_token")
 
-        return token_data
+            if not self._access_token:
+                raise PanasonicAuthError("Token refresh returned empty access token")
+
+            return token_data
 
     def is_token_expiring(self, margin_seconds: int = DEFAULT_TOKEN_MARGIN_SECONDS) -> bool:
         """Return True if the access token expires within margin_seconds."""
