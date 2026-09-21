@@ -31,10 +31,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: PanasonicConfigEntry) ->
             _LOGGER.warning("No appliances found in config entry, but continuing setup.")
 
         session = async_get_clientsession(hass)
+
+        def _save_tokens(access_token: str, refresh_token: str | None) -> None:
+            new_data = dict(entry.data)
+            new_data[CONF_ACCESS_TOKEN] = access_token
+            if refresh_token:
+                new_data["refresh_token"] = refresh_token
+            hass.config_entries.async_update_entry(entry, data=new_data)
+            _LOGGER.info("Access token updated and persisted via callback")
+
         api = PanasonicAPI(
             session=session,
             access_token=entry.data.get(CONF_ACCESS_TOKEN),
             refresh_token=entry.data.get("refresh_token"),
+            token_updated_callback=_save_tokens,
         )
 
         push_handler: PanasonicPushHandler | None = None

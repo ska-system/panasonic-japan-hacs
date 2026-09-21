@@ -7,7 +7,7 @@ import json
 import logging
 import time
 from datetime import datetime
-from typing import Any
+from typing import Any, Callable
 
 import aiohttp
 
@@ -55,12 +55,13 @@ class PanasonicAPI:
         session: aiohttp.ClientSession | None = None,
         access_token: str | None = None,
         refresh_token: str | None = None,
+        token_updated_callback: Callable[[str, str | None], None] | None = None,
     ) -> None:
-        """Initialize the API client."""
         self._session = session
         self._internal_session: aiohttp.ClientSession | None = None
         self._access_token = access_token
         self._refresh_token = refresh_token
+        self._token_updated_callback = token_updated_callback
         self._lock = asyncio.Lock()
 
     async def _get_session(self) -> aiohttp.ClientSession:
@@ -332,6 +333,9 @@ class PanasonicAPI:
 
             if not self._access_token:
                 raise PanasonicAuthError("Token refresh returned empty access token")
+
+            if self._token_updated_callback:
+                self._token_updated_callback(self._access_token, self._refresh_token)
 
             return token_data
 
