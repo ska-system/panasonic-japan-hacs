@@ -29,22 +29,25 @@ async def async_setup_entry(
 
     entities = []
     for coordinator in coordinators.values():
-        if is_fridge_eoj(coordinator.eoj):
+        if is_fridge_eoj(coordinator.eoj) and coordinator.is_function_supported("coolOven", default=True):
             entities.append(PanasonicClimate(coordinator))
 
     async_add_entities(entities)
 
     # Register entity-level cooling_assist service
-    platform = entity_platform.async_get_current_platform()
-    platform.async_register_entity_service(
-        "cooling_assist",
-        {
-            vol.Required("mode"): cv.string,
-            vol.Optional("time", default=0): vol.Coerce(int),
-            vol.Optional("second", default=0): vol.Coerce(int),
-        },
-        "async_cooling_assist",
-    )
+    try:
+        platform = entity_platform.async_get_current_platform()
+        platform.async_register_entity_service(
+            "cooling_assist",
+            {
+                vol.Required("mode"): cv.string,
+                vol.Optional("time", default=0): vol.Coerce(int),
+                vol.Optional("second", default=0): vol.Coerce(int),
+            },
+            "async_cooling_assist",
+        )
+    except RuntimeError:
+        pass
 
 
 class PanasonicClimate(PanasonicEntity, ClimateEntity):

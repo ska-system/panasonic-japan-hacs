@@ -135,9 +135,14 @@ class PanasonicAPI:
         return headers
 
     async def _make_request(
-        self, method: str, url: str, **kwargs: Any
+        self,
+        method: str,
+        url: str,
+        is_auth_request: bool = False,
+        retry_on_401: bool = True,
+        **kwargs: Any,
     ) -> Any:
-        """Make an API request with standardized error handling."""
+        """Make an API request with standardized error handling and automatic retry on 401."""
         session = await self._get_session()
         timeout_sec = kwargs.pop("timeout", 30)
         timeout = aiohttp.ClientTimeout(total=timeout_sec)
@@ -145,6 +150,31 @@ class PanasonicAPI:
         try:
             async with session.request(method, url, timeout=timeout, **kwargs) as response:
                 if response.status in (401, 403):
+                    if not is_auth_request and retry_on_401 and self._refresh_token:
+                        _LOGGER.debug(
+                            "HTTP %s on %s - attempting token refresh and retry",
+                            response.status,
+                            url,
+                        )
+                        old_token = self._access_token
+                        async with self._lock:
+                            if self._access_token == old_token:
+                                await self._refresh_access_token_locked(force=True)
+
+                        req_headers = dict(kwargs.get("headers", {}))
+                        if "Authorization" in req_headers:
+                            req_headers["Authorization"] = f"Bearer {self._access_token}"
+                            kwargs["headers"] = req_headers
+
+                        return await self._make_request(
+                            method,
+                            url,
+                            is_auth_request=False,
+                            retry_on_401=False,
+                            timeout=timeout_sec,
+                            **kwargs,
+                        )
+
                     raise PanasonicAuthError(
                         f"Authentication failed: {response.status}"
                     )
@@ -292,52 +322,62 @@ class PanasonicAPI:
             _LOGGER.exception("Error linking push term to device: %s", err)
             return None
 
-    async def refresh_access_token(self) -> dict[str, Any]:
-        """Refresh the access token using refresh token with robust error handling."""
-        async with self._lock:
-            if not self.is_token_expiring(margin_seconds=DEFAULT_TOKEN_MARGIN_SECONDS):
-                return {
-                    "access_token": self._access_token,
-                    "refresh_token": self._refresh_token,
-                }
-
-            if not self._refresh_token:
-                raise PanasonicAuthError("No refresh token available")
-
-            headers = {
-                "Content-Type": "application/x-www-form-urlencoded",
-                "User-Agent": USER_AGENT,
-            }
-
-            data = {
-                "grant_type": "refresh_token",
-                "client_id": AUTH0_CLIENT_ID,
+    async def _refresh_access_token_locked(self, force: bool = False) -> dict[str, Any]:
+        """Internal helper to execute token refresh while holding self._lock."""
+        if not force and not self.is_token_expiring(margin_seconds=DEFAULT_TOKEN_MARGIN_SECONDS):
+            return {
+                "access_token": self._access_token,
                 "refresh_token": self._refresh_token,
             }
 
-            try:
-                token_data = await self._make_request(
-                    "POST", auth0_token_url(), data=data, headers=headers, timeout=30
-                )
-            except PanasonicConnectionError as err:
-                raise PanasonicConnectionError(f"Network error during token refresh: {err}") from err
-            except PanasonicRequestError as err:
-                raise PanasonicAuthError(f"Token refresh rejected by Auth0: {err}") from err
+        if not self._refresh_token:
+            raise PanasonicAuthError("No refresh token available")
 
-            if not isinstance(token_data, dict):
-                raise PanasonicAuthError("Token refresh returned invalid response format")
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": USER_AGENT,
+        }
 
-            self._access_token = token_data.get("access_token")
-            if "refresh_token" in token_data:
-                self._refresh_token = token_data.get("refresh_token")
+        data = {
+            "grant_type": "refresh_token",
+            "client_id": AUTH0_CLIENT_ID,
+            "refresh_token": self._refresh_token,
+        }
 
-            if not self._access_token:
-                raise PanasonicAuthError("Token refresh returned empty access token")
+        try:
+            token_data = await self._make_request(
+                "POST",
+                auth0_token_url(),
+                data=data,
+                headers=headers,
+                timeout=30,
+                is_auth_request=True,
+                retry_on_401=False,
+            )
+        except PanasonicConnectionError as err:
+            raise PanasonicConnectionError(f"Network error during token refresh: {err}") from err
+        except PanasonicRequestError as err:
+            raise PanasonicAuthError(f"Token refresh rejected by Auth0: {err}") from err
 
-            if self._token_updated_callback:
-                self._token_updated_callback(self._access_token, self._refresh_token)
+        if not isinstance(token_data, dict):
+            raise PanasonicAuthError("Token refresh returned invalid response format")
 
-            return token_data
+        self._access_token = token_data.get("access_token")
+        if "refresh_token" in token_data:
+            self._refresh_token = token_data.get("refresh_token")
+
+        if not self._access_token:
+            raise PanasonicAuthError("Token refresh returned empty access token")
+
+        if self._token_updated_callback:
+            self._token_updated_callback(self._access_token, self._refresh_token)
+
+        return token_data
+
+    async def refresh_access_token(self, force: bool = False) -> dict[str, Any]:
+        """Refresh the access token using refresh token with robust error handling."""
+        async with self._lock:
+            return await self._refresh_access_token_locked(force=force)
 
     def is_token_expiring(self, margin_seconds: int = DEFAULT_TOKEN_MARGIN_SECONDS) -> bool:
         """Return True if the access token expires within margin_seconds."""

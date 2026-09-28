@@ -71,19 +71,82 @@ async def test_control_device_success():
     assert result == {"result": "ok"}
 
 
-from homeassistant.exceptions import ConfigEntryAuthFailed
-
-
 async def test_make_request_unauthorized():
-    """401エラー時に ConfigEntryAuthFailed が送出されることを検証する。"""
+    """401エラー（リフレッシュトークンなし）時に PanasonicAuthError が送出されることを検証する。"""
     mock_resp = MockClientResponse(status=401)
     session = create_mock_session(mock_resp)
 
-    api = PanasonicAPI(session=session, access_token="expired_token")
+    api = PanasonicAPI(session=session, access_token="expired_token", refresh_token=None)
 
-    with pytest.raises(ConfigEntryAuthFailed) as excinfo:
+    with pytest.raises(PanasonicAuthError) as excinfo:
         await api.get_user_info()
     assert "Authentication failed: 401" in str(excinfo.value)
+
+
+async def test_make_request_auto_refresh_on_401():
+    """401エラー発生時にリフレッシュトークンがあれば自動更新してリトライ成功することを検証する。"""
+    session = MagicMock(spec=aiohttp.ClientSession)
+    session.closed = False
+
+    # 1回目: 401 Unauthorized
+    # 2回目: Auth0 トークン更新 (200)
+    # 3回目: 再リクエスト成功 (200)
+    resp_401 = MockClientResponse(status=401)
+    resp_token = MockClientResponse(
+        status=200, json_data={"access_token": "refreshed_token", "refresh_token": "next_refresh"}
+    )
+    resp_success = MockClientResponse(status=200, json_data={"result": "ok"})
+
+    session.request = MagicMock(side_effect=[resp_401, resp_token, resp_success])
+
+    api = PanasonicAPI(session=session, access_token="old_access", refresh_token="valid_refresh")
+    result = await api.get_user_info()
+
+    assert result == {"result": "ok"}
+    assert api.access_token == "refreshed_token"
+    assert session.request.call_count == 3
+
+
+async def test_concurrent_requests_token_refresh():
+    """複数APIが同時に401になっても、トークン更新は1回のみ実行され全リクエストが成功することを検証する。"""
+    session = MagicMock(spec=aiohttp.ClientSession)
+    session.closed = False
+
+    # 2つの並列リクエストが走る想定
+    # req1: 401
+    # req2: 401
+    # auth0: 200 (トークン更新)
+    # req1 retry: 200
+    # req2 retry: 200
+    call_count = 0
+
+    def mock_request(method, url, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        if "oauth/token" in url or "token" in url:
+            return MockClientResponse(
+                status=200,
+                json_data={"access_token": "new_token_123", "refresh_token": "new_refresh_123"},
+            )
+        auth_hdr = kwargs.get("headers", {}).get("Authorization", "")
+        if auth_hdr == "Bearer new_token_123":
+            return MockClientResponse(status=200, json_data={"status": "success", "call": call_count})
+        return MockClientResponse(status=401)
+
+    session.request = MagicMock(side_effect=mock_request)
+
+    api = PanasonicAPI(session=session, access_token="old_token", refresh_token="valid_refresh")
+
+    import asyncio
+    results = await asyncio.gather(
+        api.get_device_status("appliance_1"),
+        api.get_device_settings("appliance_1"),
+        api.get_electricity_reduction("appliance_1"),
+    )
+
+    for res in results:
+        assert res["status"] == "success"
+    assert api.access_token == "new_token_123"
 
 
 async def test_make_request_server_error():
@@ -121,7 +184,7 @@ async def test_refresh_access_token_success():
     session = create_mock_session(mock_resp)
 
     api = PanasonicAPI(session=session, access_token="old_access", refresh_token="old_refresh")
-    token_data = await api.refresh_access_token()
+    token_data = await api.refresh_access_token(force=True)
 
     assert token_data["access_token"] == "new_access_token"
     assert api.access_token == "new_access_token"

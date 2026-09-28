@@ -35,6 +35,7 @@ class PanasonicNumberDescription(NumberEntityDescription):
     entity_category: EntityCategory | None = None
     max_value_fn: Any | None = None
     min_value_fn: Any | None = None
+    required_function: str | None = None
 
 
 NUMBERS: tuple[PanasonicNumberDescription, ...] = (
@@ -48,6 +49,7 @@ NUMBERS: tuple[PanasonicNumberDescription, ...] = (
         native_unit_of_measurement=UnitOfTime.MINUTES,
         entity_category=EntityCategory.CONFIG,
         mode=NumberMode.BOX,
+        required_function="coolOven",
     ),
     PanasonicNumberDescription(
         key="cooling_assist_second",
@@ -59,6 +61,7 @@ NUMBERS: tuple[PanasonicNumberDescription, ...] = (
         native_unit_of_measurement=UnitOfTime.SECONDS,
         entity_category=EntityCategory.CONFIG,
         mode=NumberMode.BOX,
+        required_function="coolOven",
     ),
     PanasonicNumberDescription(
         key="notify_door_open_time",
@@ -70,6 +73,7 @@ NUMBERS: tuple[PanasonicNumberDescription, ...] = (
         native_unit_of_measurement=UnitOfTime.HOURS,
         entity_category=EntityCategory.CONFIG,
         mode=NumberMode.BOX,
+        required_function="doorOpenInfo",
     ),
 )
 
@@ -86,6 +90,10 @@ async def async_setup_entry(
     for coordinator in coordinators.values():
         if is_fridge_eoj(coordinator.eoj):
             for description in NUMBERS:
+                if description.required_function and not coordinator.is_function_supported(
+                    description.required_function
+                ):
+                    continue
                 entities.append(PanasonicNumber(coordinator, description))
 
     async_add_entities(entities)

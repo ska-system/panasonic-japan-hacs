@@ -25,6 +25,7 @@ class PanasonicSwitchDescription(SwitchEntityDescription):
     """Describe a Panasonic fridge switch."""
     status_key: str = ""
     data_source: str = "device_status"
+    required_function: str | None = None
 
 
 SWITCHES: tuple[PanasonicSwitchDescription, ...] = (
@@ -45,12 +46,14 @@ SWITCHES: tuple[PanasonicSwitchDescription, ...] = (
         translation_key="fresh_frozen_status",
         icon="mdi:fridge-industrial",
         status_key="fresh_frozen_status",
+        required_function="freshFrozen",
     ),
     PanasonicSwitchDescription(
         key="econavi_lamp",
         translation_key="econavi_lamp_status",
         icon="mdi:lightbulb",
         status_key="econavi_lamp_status",
+        required_function="econaviLedOnOff",
     ),
     PanasonicSwitchDescription(
         key="notify_water_shortage",
@@ -67,6 +70,7 @@ SWITCHES: tuple[PanasonicSwitchDescription, ...] = (
         status_key="coolOven",
         entity_category=EntityCategory.CONFIG,
         data_source="notification_settings",
+        required_function="coolOven",
     ),
     PanasonicSwitchDescription(
         key="notify_ice_completed",
@@ -91,6 +95,7 @@ SWITCHES: tuple[PanasonicSwitchDescription, ...] = (
         status_key="doorOpenInfo",
         entity_category=EntityCategory.CONFIG,
         data_source="notification_settings",
+        required_function="doorOpenInfo",
     ),
 )
 
@@ -111,6 +116,11 @@ async def async_setup_entry(
             notification_settings = data.get("notification_settings", {})
 
             for description in SWITCHES:
+                if description.required_function and not coordinator.is_function_supported(
+                    description.required_function
+                ):
+                    continue
+
                 if description.data_source == "notification_settings":
                     param_list = notification_settings.get("param_list", [])
                     exists = any(

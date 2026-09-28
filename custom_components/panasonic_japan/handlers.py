@@ -27,30 +27,45 @@ class RefrigeratorHandler(BaseApplianceHandler):
     """冷蔵庫（EOJ: 03B7）専用のAPIハンドラー"""
 
     async def fetch_all_data(self, appliance_id: str, push_term_id: str = "") -> dict[str, Any]:
-        # aiohttp により 5 つのエンドポイントを非同期に完全並列取得
+        # aiohttp により 6 つのエンドポイントを非同期に完全並列取得
         (
             device_status,
             device_settings,
             electricity_data,
             notification_settings,
             door_open_info,
+            device_functions,
         ) = await asyncio.gather(
             self.api.get_device_status(appliance_id),
             self.api.get_device_settings(appliance_id),
             self.api.get_electricity_reduction(appliance_id),
             self.api.get_notification_settings(appliance_id, push_term_id),
             self.api.get_door_open_info(appliance_id),
+            self.api.get_device_functions(appliance_id),
         )
 
         merged_status = dict(device_status) if isinstance(device_status, dict) else {}
         if isinstance(device_settings, dict):
             merged_status.update(device_settings)
 
+        functions_dict: dict[str, bool] = {}
+        specs_dict: dict[str, Any] = {}
+        if isinstance(device_functions, dict):
+            for func in device_functions.get("reizo_function_list", []):
+                if isinstance(func, dict) and "function_id" in func:
+                    functions_dict[func["function_id"]] = bool(func.get("function_value", False))
+            for spec in device_functions.get("reizo_spec_list", []):
+                if isinstance(spec, dict) and "spec_id" in spec:
+                    specs_dict[spec["spec_id"]] = spec.get("spec_value")
+
         return {
             "device_status": merged_status,
             "notification_settings": notification_settings if isinstance(notification_settings, dict) else {},
             "electricity": electricity_data if isinstance(electricity_data, dict) else {},
             "door_open_info": door_open_info if isinstance(door_open_info, dict) else {},
+            "functions": functions_dict,
+            "specs": specs_dict,
+            "raw_functions": device_functions if isinstance(device_functions, dict) else {},
         }
 
 class DefaultApplianceHandler(BaseApplianceHandler):

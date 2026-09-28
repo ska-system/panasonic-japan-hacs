@@ -28,15 +28,15 @@ async def async_setup_entry(
     sensors = []
     for coordinator in coordinators.values():
         if is_fridge_eoj(coordinator.eoj):
-            sensors.extend(
-                [
-                    PanasonicCostReductionSensor(coordinator),
-                    PanasonicOperationModeSensor(coordinator),
-                    PanasonicFirmwareSensor(coordinator),
-                    PanasonicCoolovenStateSensor(coordinator),
-                    PanasonicDoorOpenSensor(coordinator),
-                ]
-            )
+            sensors.append(PanasonicCostReductionSensor(coordinator))
+            sensors.append(PanasonicOperationModeSensor(coordinator))
+
+            if coordinator.is_function_supported("firmwareUpdate", default=True):
+                sensors.append(PanasonicFirmwareSensor(coordinator))
+            if coordinator.is_function_supported("coolOven", default=True):
+                sensors.append(PanasonicCoolovenStateSensor(coordinator))
+            if coordinator.is_function_supported("doorOpenInfo", default=True):
+                sensors.append(PanasonicDoorOpenSensor(coordinator))
 
     async_add_entities(sensors)
 

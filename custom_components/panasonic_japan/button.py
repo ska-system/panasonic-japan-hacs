@@ -26,7 +26,7 @@ async def async_setup_entry(
     entities = [
         CoolingAssistButton(coordinator)
         for coordinator in coordinators.values()
-        if is_fridge_eoj(coordinator.eoj)
+        if is_fridge_eoj(coordinator.eoj) and coordinator.is_function_supported("coolOven", default=True)
     ]
     async_add_entities(entities)
 

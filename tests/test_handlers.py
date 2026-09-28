@@ -19,11 +19,25 @@ def mock_api():
     api.get_electricity_reduction = AsyncMock(return_value={"cost_reduction": 150})
     api.get_notification_settings = AsyncMock(return_value={"door_alert": True})
     api.get_door_open_info = AsyncMock(return_value={"open_count": 5})
+    api.get_device_functions = AsyncMock(
+        return_value={
+            "product_code": "NR-F607HPX-N",
+            "reizo_function_list": [
+                {"function_id": "coolOven", "function_value": True},
+                {"function_id": "freshFrozen", "function_value": False},
+                {"function_id": "doorOpenInfo", "function_value": True},
+                {"function_id": "econaviLedOnOff", "function_value": True},
+                {"function_id": "pcroomLightMode", "function_value": True},
+                {"function_id": "partialFreezingRoom", "function_value": False},
+            ],
+            "reizo_spec_list": [{"spec_id": "roomType", "spec_value": 1}],
+        }
+    )
     return api
 
 
 async def test_refrigerator_handler_fetch_all_data_parallel(mock_api):
-    """RefrigeratorHandler が 5 つの API を呼び出しデータを正しくマージすることを検証する。"""
+    """RefrigeratorHandler が 6 つの API を呼び出しデータを正しくマージすることを検証する。"""
     handler = RefrigeratorHandler(mock_api)
     result = await handler.fetch_all_data("test_appliance_123", push_term_id="term_abc")
 
@@ -33,6 +47,7 @@ async def test_refrigerator_handler_fetch_all_data_parallel(mock_api):
     mock_api.get_electricity_reduction.assert_awaited_once_with("test_appliance_123")
     mock_api.get_notification_settings.assert_awaited_once_with("test_appliance_123", "term_abc")
     mock_api.get_door_open_info.assert_awaited_once_with("test_appliance_123")
+    mock_api.get_device_functions.assert_awaited_once_with("test_appliance_123")
 
     # device_status と device_settings がマージされていること
     assert result["device_status"] == {
@@ -44,6 +59,15 @@ async def test_refrigerator_handler_fetch_all_data_parallel(mock_api):
     assert result["notification_settings"] == {"door_alert": True}
     assert result["electricity"] == {"cost_reduction": 150}
     assert result["door_open_info"] == {"open_count": 5}
+    assert result["functions"] == {
+        "coolOven": True,
+        "freshFrozen": False,
+        "doorOpenInfo": True,
+        "econaviLedOnOff": True,
+        "pcroomLightMode": True,
+        "partialFreezingRoom": False,
+    }
+    assert result["specs"] == {"roomType": 1}
 
 
 async def test_refrigerator_handler_with_empty_responses(mock_api):
@@ -53,6 +77,7 @@ async def test_refrigerator_handler_with_empty_responses(mock_api):
     mock_api.get_electricity_reduction = AsyncMock(return_value={})
     mock_api.get_notification_settings = AsyncMock(return_value={})
     mock_api.get_door_open_info = AsyncMock(return_value={})
+    mock_api.get_device_functions = AsyncMock(return_value={})
 
     handler = RefrigeratorHandler(mock_api)
     result = await handler.fetch_all_data("test_appliance_123")
@@ -61,6 +86,8 @@ async def test_refrigerator_handler_with_empty_responses(mock_api):
     assert result["notification_settings"] == {}
     assert result["electricity"] == {}
     assert result["door_open_info"] == {}
+    assert result["functions"] == {}
+    assert result["specs"] == {}
 
 
 async def test_default_handler(mock_api):

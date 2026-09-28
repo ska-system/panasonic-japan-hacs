@@ -26,6 +26,7 @@ class PanasonicSelectDescription(SelectEntityDescription):
     options_map: dict[str, str] = field(default_factory=dict)
     reverse_map: dict[str, str] = field(default_factory=dict)
     entity_category: EntityCategory | None = None
+    required_function: str | None = None
 
 
 SELECTS: tuple[PanasonicSelectDescription, ...] = (
@@ -35,6 +36,7 @@ SELECTS: tuple[PanasonicSelectDescription, ...] = (
         icon="mdi:fridge-bottom",
         status_key="partial_mode",
         options=["chilled", "weak", "medium", "strong"],
+        required_function="partialFreezingRoom",
     ),
     PanasonicSelectDescription(
         key="cold_room_mode",
@@ -63,6 +65,7 @@ SELECTS: tuple[PanasonicSelectDescription, ...] = (
         icon="mdi:lightbulb-outline",
         status_key="pcroom_light_mode",
         options=["off", "dark", "bright"],
+        required_function="pcroomLightMode",
     ),
     PanasonicSelectDescription(
         key="door_alarms_mode",
@@ -77,6 +80,7 @@ SELECTS: tuple[PanasonicSelectDescription, ...] = (
         icon="mdi:lightbulb",
         status_key="cooloven_lamp_mode",
         options=["off", "dark", "bright"],
+        required_function="coolOven",
     ),
     PanasonicSelectDescription(
         key="ice_making_mode",
@@ -117,6 +121,7 @@ SELECTS: tuple[PanasonicSelectDescription, ...] = (
         },
         status_key=None,  # State managed via coordinator cooling_assist_mode
         entity_category=EntityCategory.CONFIG,
+        required_function="coolOven",
     ),
 )
 
@@ -134,6 +139,11 @@ async def async_setup_entry(
         if is_fridge_eoj(coordinator.eoj):
             device_status = (coordinator.data or {}).get("device_status", {})
             for description in SELECTS:
+                if description.required_function and not coordinator.is_function_supported(
+                    description.required_function
+                ):
+                    continue
+
                 if description.status_key:
                     if description.status_key in device_status:
                         entities.append(PanasonicSelect(coordinator, description))

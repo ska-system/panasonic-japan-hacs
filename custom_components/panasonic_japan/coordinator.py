@@ -65,6 +65,24 @@ class PanasonicDataUpdateCoordinator(DataUpdateCoordinator):
             update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
         )
 
+    def is_function_supported(self, function_id: str | None, default: bool = True) -> bool:
+        """Check if a specific function_id is supported and enabled on this appliance."""
+        if not function_id:
+            return True
+        data = self.data or {}
+        functions = data.get("functions")
+        if functions is None:
+            return default
+        return functions.get(function_id, False)
+
+    def get_spec(self, spec_id: str, default: Any = None) -> Any:
+        """Get spec value for a given spec_id."""
+        data = self.data or {}
+        specs = data.get("specs")
+        if specs is None:
+            return default
+        return specs.get(spec_id, default)
+
     def register_cooling_assist_listener(self, listener: Callable[[], None]) -> Callable[[], None]:
         """Register a listener for cooling assist state changes."""
         self._cooling_assist_listeners.append(listener)
