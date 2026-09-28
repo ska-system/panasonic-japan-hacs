@@ -36,7 +36,6 @@ SELECTS: tuple[PanasonicSelectDescription, ...] = (
         icon="mdi:fridge-bottom",
         status_key="partial_mode",
         options=["chilled", "weak", "medium", "strong"],
-        required_function="partialFreezingRoom",
     ),
     PanasonicSelectDescription(
         key="cold_room_mode",

@@ -138,8 +138,8 @@ async def test_platforms_filtering_with_user_fridge_model(hass: HomeAssistant):
     await setup_selects(hass, mock_entry, lambda ents: selects.extend(ents))
     select_keys = [s.entity_description.key for s in selects]
 
-    # partialFreezingRoom が False なので partial_mode は追加されない
-    assert "partial_mode" not in select_keys
+    # partial_mode はパーシャル/チルド切替室搭載機種で利用可能
+    assert "partial_mode" in select_keys
     # pcroomLightMode が True なので pcroom_light_mode は追加される
     assert "pcroom_light_mode" in select_keys
     # coolOven が True なので cooloven_lamp_mode, cooling_assist_mode は追加される
