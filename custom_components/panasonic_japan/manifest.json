@@ -1,13 +1,13 @@
 {
   "domain": "panasonic_japan",
   "name": "Panasonic Japan Kitchen Appliances",
-  "codeowners": ["@yuyuvn"],
+  "codeowners": ["@ska-system"],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/yuyuvn/panasonic-japan-hacs",
+  "documentation": "https://github.com/ska-system/panasonic-japan-hacs",
   "integration_type": "hub",
   "iot_class": "cloud_push",
-  "issue_tracker": "https://github.com/yuyuvn/panasonic-japan-hacs/issues",
+  "issue_tracker": "https://github.com/ska-system/panasonic-japan-hacs/issues",
   "requirements": ["firebase-messaging>=0.2.0"],
   "version": "1.0.0"
 }
