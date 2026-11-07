@@ -196,11 +196,9 @@ class PanasonicSelect(PanasonicEntity, SelectEntity):
     async def async_select_option(self, option: str) -> None:
         """Send selected option to the fridge or update local state."""
         if self.entity_description.status_key:
-            await self.coordinator.api.control_device(
-                self.coordinator.appliance_id,
-                {self.entity_description.status_key: option},
+            await self.coordinator.async_control_device(
+                {self.entity_description.status_key: option}
             )
-            await self.coordinator.async_request_refresh()
         elif self.entity_description.key == "cooling_assist_mode":
             self.coordinator.set_cooling_assist_mode(option)
             self.async_write_ha_state()

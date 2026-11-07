@@ -125,18 +125,47 @@ class PanasonicDataUpdateCoordinator(DataUpdateCoordinator):
             self.cooling_assist_second = 0
         self._notify_cooling_assist_listeners()
 
+    async def async_control_device(self, payload: dict[str, Any]) -> dict[str, Any] | None:
+        """Control device with automatic token refresh, safe error handling, and refresh."""
+        try:
+            result = await self.api.control_device(self.appliance_id, payload)
+        except PanasonicAuthError as err:
+            _LOGGER.warning("Auth error during device control — attempting token refresh: %s", err)
+            if await self._async_refresh_and_persist():
+                try:
+                    result = await self.api.control_device(self.appliance_id, payload)
+                except Exception as retry_err:
+                    raise HomeAssistantError(
+                        f"Failed to control device after token refresh: {retry_err}"
+                    ) from retry_err
+            else:
+                self.config_entry.async_start_reauth(self.hass)
+                raise HomeAssistantError(
+                    f"Authentication failed while controlling device (re-auth required): {err}"
+                ) from err
+        except PanasonicConnectionError as err:
+            raise HomeAssistantError(
+                f"Network error while controlling device: {err}"
+            ) from err
+        except Exception as err:
+            raise HomeAssistantError(
+                f"Failed to control device: {err}"
+            ) from err
+
+        await self.async_request_refresh()
+        return result
+
     async def async_control_cooling_assist(
         self, mode: str, time_min: int | float = 0, time_sec: int | float = 0
     ) -> None:
-        """Send cooling assist command to the device and refresh status."""
+        """Send cooling assist command to the device and refresh status with auto-recovery."""
         clamped_time, clamped_sec = clamp_cooling_assist_values(mode, time_min, time_sec)
         payload: dict[str, Any] = {"cooloven_mode": mode}
         if mode != "off":
             payload["cooloven_time"] = clamped_time
             payload["cooloven_second"] = clamped_sec
 
-        await self.api.control_device(self.appliance_id, payload)
-        await self.async_request_refresh()
+        await self.async_control_device(payload)
 
     async def async_execute_cooling_assist(self) -> None:
         """Execute cooling assist using currently configured settings."""
@@ -205,6 +234,7 @@ class PanasonicDataUpdateCoordinator(DataUpdateCoordinator):
             raise UpdateFailed(f"Network error during token check (will retry): {err}") from err
         except PanasonicAuthError:
             if not await self._async_refresh_and_persist():
+                self.config_entry.async_start_reauth(self.hass)
                 raise UpdateFailed(
                     "Access token expired and refresh failed — please re-authenticate"
                 )
@@ -221,6 +251,7 @@ class PanasonicDataUpdateCoordinator(DataUpdateCoordinator):
                     raise UpdateFailed(
                         f"API error after token refresh: {retry_err}"
                     ) from retry_err
+            self.config_entry.async_start_reauth(self.hass)
             raise UpdateFailed(f"Authentication failed: {err}") from err
 
         except PanasonicConnectionError as err:

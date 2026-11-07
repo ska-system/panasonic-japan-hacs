@@ -1,5 +1,5 @@
 import json
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 import aiohttp
 from custom_components.panasonic_japan.api import (
@@ -66,7 +66,8 @@ async def test_control_device_success():
     session = create_mock_session(mock_resp)
 
     api = PanasonicAPI(session=session, access_token="dummy_token")
-    result = await api.control_device("test_appliance_id", {"eco_nav": True})
+    with patch.object(api, "ensure_token_valid", new=AsyncMock()):
+        result = await api.control_device("test_appliance_id", {"eco_nav": True})
 
     assert result == {"result": "ok"}
 

@@ -203,9 +203,6 @@ class PanasonicSwitch(PanasonicEntity, SwitchEntity):
                 self.coordinator.appliance_id,
                 current_settings,
             )
+            await self.coordinator.async_request_refresh()
         else:
-            await self.coordinator.api.control_device(
-                self.coordinator.appliance_id,
-                payload,
-            )
-        await self.coordinator.async_request_refresh()
+            await self.coordinator.async_control_device(payload)

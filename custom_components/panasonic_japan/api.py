@@ -162,9 +162,12 @@ class PanasonicAPI:
                                 await self._refresh_access_token_locked(force=True)
 
                         req_headers = dict(kwargs.get("headers", {}))
-                        if "Authorization" in req_headers:
-                            req_headers["Authorization"] = f"Bearer {self._access_token}"
-                            kwargs["headers"] = req_headers
+                        # Update Authorization header (case-insensitive key handling)
+                        auth_key = next((k for k in req_headers if k.lower() == "authorization"), "Authorization")
+                        req_headers[auth_key] = f"Bearer {self._access_token}"
+                        if "X-Reizo-Date" in req_headers:
+                            req_headers["X-Reizo-Date"] = self._get_reizo_date()
+                        kwargs["headers"] = req_headers
 
                         return await self._make_request(
                             method,
@@ -231,6 +234,7 @@ class PanasonicAPI:
 
     async def control_device(self, appliance_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """PUT /devices/{id}/status — send a control command to the fridge."""
+        await self.ensure_token_valid()
         url = device_url(appliance_id, "status")
         return await self._make_request(
             "PUT", url, headers=self._get_headers(), json=payload, timeout=30

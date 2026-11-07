@@ -21,14 +21,22 @@ async def handle_set_cooloven(hass: HomeAssistant, call: ServiceCall) -> None:
     time_sec = call.data.get("second", 0)
     target_appliance_id = call.data.get("appliance_id")
 
+    matched = False
     entries: list[PanasonicConfigEntry] = hass.config_entries.async_loaded_entries(DOMAIN)
     for entry in entries:
         for coordinator in entry.runtime_data.coordinators.values():
             if is_fridge_eoj(coordinator.eoj):
                 if not target_appliance_id or coordinator.appliance_id == target_appliance_id:
+                    matched = True
                     await coordinator.async_control_cooling_assist(
                         mode, time_min, time_sec
                     )
+
+    if not matched:
+        _LOGGER.warning(
+            "Service set_cooloven called but no matching refrigerator found (target_appliance_id=%s)",
+            target_appliance_id,
+        )
 
 
 def async_register_services(hass: HomeAssistant) -> None:
