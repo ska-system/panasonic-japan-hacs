@@ -10,6 +10,7 @@ from custom_components.panasonic_japan.cooling_assist import (
     get_cooling_assist_bounds,
     get_default_cooling_assist_time,
 )
+from custom_components.panasonic_japan.api import PanasonicAuthError
 from custom_components.panasonic_japan.coordinator import PanasonicDataUpdateCoordinator
 from custom_components.panasonic_japan.button import CoolingAssistButton
 from custom_components.panasonic_japan.select import (
@@ -186,6 +187,21 @@ async def test_coordinator_control_and_execute_cooling_assist(mock_coordinator):
     mock_coordinator.cooling_assist_second = 0
     with pytest.raises(HomeAssistantError, match="Time and seconds cannot both be 0 in quench mode"):
         await mock_coordinator.async_execute_cooling_assist()
+
+
+async def test_device_control_auth_failure_starts_reauth(mock_coordinator):
+    """Do not retry controls after the API client has exhausted its auth refresh."""
+    mock_coordinator.api.control_device.side_effect = PanasonicAuthError(
+        "Authentication failed: 403"
+    )
+
+    with pytest.raises(HomeAssistantError, match="re-auth required"):
+        await mock_coordinator.async_control_device({"cooloven_mode": "off"})
+
+    mock_coordinator.api.control_device.assert_awaited_once()
+    mock_coordinator.config_entry.async_start_reauth.assert_called_once_with(
+        mock_coordinator.hass
+    )
 
 
 async def test_cooling_assist_button(mock_coordinator):

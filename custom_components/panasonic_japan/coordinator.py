@@ -130,19 +130,14 @@ class PanasonicDataUpdateCoordinator(DataUpdateCoordinator):
         try:
             result = await self.api.control_device(self.appliance_id, payload)
         except PanasonicAuthError as err:
-            _LOGGER.warning("Auth error during device control — attempting token refresh: %s", err)
-            if await self._async_refresh_and_persist():
-                try:
-                    result = await self.api.control_device(self.appliance_id, payload)
-                except Exception as retry_err:
-                    raise HomeAssistantError(
-                        f"Failed to control device after token refresh: {retry_err}"
-                    ) from retry_err
-            else:
-                self.config_entry.async_start_reauth(self.hass)
-                raise HomeAssistantError(
-                    f"Authentication failed while controlling device (re-auth required): {err}"
-                ) from err
+            _LOGGER.warning(
+                "Authentication failed during device control; re-authentication is required: %s",
+                err,
+            )
+            self.config_entry.async_start_reauth(self.hass)
+            raise HomeAssistantError(
+                f"Authentication failed while controlling device (re-auth required): {err}"
+            ) from err
         except PanasonicConnectionError as err:
             raise HomeAssistantError(
                 f"Network error while controlling device: {err}"

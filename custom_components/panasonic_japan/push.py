@@ -55,7 +55,6 @@ def _extract_header_param(header_val: Any, param_name: str) -> str:
 
     parts = [p.strip() for p in header_val.split(";") if p.strip()]
     val = ""
-    prefix = f"{param_name.lower()}="
 
     # 1. Match explicit name=value (case-insensitive)
     for p in parts:
@@ -67,11 +66,11 @@ def _extract_header_param(header_val: Any, param_name: str) -> str:
                     val = val[1:-1]
                 break
 
-    # 2. If fcmpushclient already sliced the prefix (e.g. crypto-key[3:] or encryption[5:]),
-    # the first segment without '=' contains the value
+    # fcmpushclient strips the parameter name before calling this method. A raw
+    # base64 value may still contain trailing '=' padding, which is not key=value.
     if not val and parts:
         first = parts[0].strip()
-        if "=" not in first:
+        if "=" not in first.rstrip("="):
             val = first
             if len(val) >= 2 and val[0] == val[-1] and val[0] in ('"', "'"):
                 val = val[1:-1]

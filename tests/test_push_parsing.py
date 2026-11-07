@@ -1,6 +1,7 @@
 """Test script for Web Push header parsing and decryption patch in push.py."""
 from __future__ import annotations
 
+import base64
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -49,6 +50,16 @@ class TestWebPushParsing(unittest.TestCase):
         raw_salt = "abcd1234efgh5678; keyid=foo"
         salt = _extract_header_param(raw_salt, "salt")
         self.assertEqual(salt, "abcd1234efgh5678")
+
+    def test_parse_sliced_base64_value_with_padding(self):
+        raw_salt = base64.urlsafe_b64encode(b"0123456789abcdef").decode()
+        salt = _extract_header_param(f"{raw_salt}; rs=0", "salt")
+        self.assertEqual(base64.urlsafe_b64decode(salt), b"0123456789abcdef")
+
+    def test_parse_explicit_base64_value_with_padding(self):
+        raw_salt = base64.urlsafe_b64encode(b"0123456789abcdef").decode()
+        salt = _extract_header_param(f"salt={raw_salt}; rs=0", "salt")
+        self.assertEqual(base64.urlsafe_b64decode(salt), b"0123456789abcdef")
 
     def test_padding(self):
         self.assertEqual(_extract_header_param("abc", "dh"), "abc=")
